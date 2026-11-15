@@ -657,21 +657,23 @@ addEventListener('mousemove',e=>{if(!wOpen)return;yaw=wY;pitch=wP;const L=docume
 new MutationObserver(()=>document.body.classList.toggle('so',$('scr').style.display=='block')).observe($('scr'),{attributes:true,attributeFilter:['style']});$('vb').onclick=()=>scr('V-BUCKS');addEventListener('keydown',e=>{const t=e.target;if((e.code=='Enter'||e.code=='Space')&&t&&t.matches&&t.matches('#nav b,#vb')){e.preventDefault();t.click()}});
 function scr(n){const e=$('scr');document.querySelectorAll('#nav b').forEach(b=>{const on=b.dataset.n==n;b.classList.toggle('on',on);if(on)b.classList.remove('dot')});if(n=='PLAY'){e.style.display='none';return}let h='<h1>'+((document.querySelector('#nav b[data-n="'+n+'"]')||{}).textContent||n)+'</h1><div class="gr">';const card=(t,d,b,f)=>{h+=`<div class="cd"><h3>${t}</h3><p>${d}</p>${b?`<button onclick="${f}">${b}</button>`:''}</div>`};
 if(n=='SHOP')[[0xf0503a,500],[0x58e060,300],[0xf0c030,800]].forEach(([c,p])=>card('Ala delta '+GL[c],p+' V-Bucks',own.includes(c)?'':'COMPRAR','buy('+c+','+p+')'));else if(n=='LOCKER'){
- const loaded=typeof SKINS!=='undefined'?SKINS.filter(k=>SK.cache&&SK.cache[k.id]):[];
- h=h.replace(/<div class="gr">$/,'<h2 class="lk">SKINS GLB CARGADAS</h2>');
- if(loaded.length){
-  h+=`<div class="locker-count">${loaded.length} skin${loaded.length===1?' cargada':'s cargadas'}</div><div class="locker-grid">`;
-  loaded.forEach(k=>{
-   const on=SK.eq===k.id,ld=SK.busy===k.id;
+ /* TAQUILLA: solo salen las skins cuyo .glb se ha encontrado (comprobado con skinScan), ya está cargado o se ha arrastrado a la ventana.
+    Las que no tienen su .glb no aparecen. Sin mensajes de contador, búsqueda ni "no encontrado". Al pulsar EQUIPAR se carga bajo demanda (skinLoad). */
+ if(!SK.scan&&Date.now()-(SK.last||0)>2000)skinScan();
+ const all=(typeof SKINS!=='undefined'?SKINS:[]).filter(k=>k.found===true||(SK.cache&&SK.cache[k.id]));
+ h=h.replace(/<div class="gr">$/,'');
+ if(all.length){
+  h+='<h2 class="lk">SKINS GLB</h2><div class="locker-grid">';
+  all.forEach(k=>{
+   const on=SK.eq===k.id,ld=SK.busy===k.id,ca=!!(SK.cache&&SK.cache[k.id]);
+   const st=ld?'CARGANDO…':on?'EQUIPADA':ca?'CARGADA':'DISPONIBLE';
    h+=`<div class="locker-skin${on?' equipped':''}">
     <div class="locker-preview">GLB</div><h3>${k.name}</h3>
-    <p>${ld?'CARGANDO…':on?'EQUIPADA':'CARGADA'}</p>
-    ${on?'':`<button onclick="skinEquip('${k.id}')">${ld?'CARGANDO…':'EQUIPAR'}</button>`}
+    <p>${st}</p>
+    ${on?'':`<button onclick="skinEquip('${k.id}')"${SK.busy&&!ld?' disabled style="opacity:.55;cursor:default"':''}>${ld?'CARGANDO…':'EQUIPAR'}</button>`}
    </div>`;
   });
   h+='</div>';
- }else{
-  h+='<div class="locker-empty">Todavía no hay skins GLB cargadas. Cuando cargues una, aparecerá aquí.</div>';
  }
  h+='<h2 class="lk">ALAS DELTA</h2><div class="gr">';
  own.forEach(c=>card('Ala delta '+GL[c],c==glCol?'Equipada':'Disponible',c==glCol?'':'EQUIPAR','eq('+c+')'));
@@ -1470,8 +1472,23 @@ function skinLoad(sk){
  if(sk.p)return sk.p;
  if(!T.GLTFLoader)return Promise.reject(new Error('GLTFLoader no disponible (hace falta internet)'));
  const ld=new T.GLTFLoader(),fs=[sk.file].concat(sk.alt||[]);
- return sk.p=new Promise((res,rej)=>{const next=k=>ld.load(SKIN_DIR+fs[k],res,undefined,e=>k+1<fs.length?next(k+1):rej(e));next(0)}).then(g=>{SK.cache[sk.id]=g;sk.bad=false;return g},e=>{sk.p=null;sk.bad=true;throw e})}
+ return sk.p=new Promise((res,rej)=>{const next=k=>ld.load(SKIN_DIR+fs[k],res,undefined,e=>k+1<fs.length?next(k+1):rej(e));next(0)}).then(g=>{SK.cache[sk.id]=g;sk.bad=false;sk.found=true;return g},e=>{sk.p=null;sk.bad=true;sk.found=false;throw e})}
 function lockerRefresh(){const b=document.querySelector('#nav b.on');if($('scr').style.display=='block'&&b&&b.dataset.n=='LOCKER')scr('LOCKER')}
+/* ¿existe el .glb? Se pide el archivo y se leen solo los 4 primeros bytes (cabecera 'glTF'); así un servidor que responde con una página en vez de un 404 no cuenta como encontrado */
+function skinProbe(sk){
+ if(sk.found===true||SK.cache[sk.id])return Promise.resolve(true);
+ const one=f=>fetch(SKIN_DIR+f,{cache:'no-store'}).then(r=>{
+  if(!r.ok)return false;
+  if(!r.body)return r.arrayBuffer().then(b=>b.byteLength>=4&&new DataView(b).getUint32(0,true)===0x46546C67);
+  const rd=r.body.getReader();
+  return rd.read().then(({value})=>{rd.cancel().catch(()=>{});return !!value&&value.length>=4&&value[0]===0x67&&value[1]===0x6C&&value[2]===0x54&&value[3]===0x46})
+ }).catch(()=>false);
+ return [sk.file].concat(sk.alt||[]).reduce((p,f)=>p.then(ok=>ok||one(f)),Promise.resolve(false)).then(ok=>{sk.found=ok;return ok})}
+/* busca qué .glb existen (al arrancar y cada vez que se abre la TAQUILLA); no los descarga, solo comprueba que estén */
+function skinScan(){
+ if(SK.scan)return;
+ SK.scan=true;
+ Promise.all(SKINS.map(skinProbe)).catch(e=>console.warn('[skin] búsqueda de .glb',e)).then(()=>{SK.scan=false;SK.last=Date.now();lockerRefresh()})}
 /* TAQUILLA → EQUIPAR */
 function skinEquip(id){
  const sk=SKINS.find(q=>q.id==id);if(!sk||SK.busy||SK.eq==id)return;
@@ -1488,7 +1505,7 @@ function skinDrop(buf,fname){
  const key=skinKey(fname);let sk=SKINS.find(q=>[q.file].concat(q.alt||[]).some(f=>skinKey(f)==key));
  new T.GLTFLoader().parse(buf,'',g=>{try{
   if(!sk){sk={id:'x'+Date.now().toString(36),name:String(fname).replace(/\.glb$/i,''),file:fname};SKINS.push(sk)}
-  SK.cache[sk.id]=g;sk.bad=false;
+  SK.cache[sk.id]=g;sk.bad=false;sk.found=true;
   if(sk.id=='jonesy')applySkin();else setPlayerSkin(sk,g);
   skinMsg(sk.name+' cargada');toast(sk.name+' equipada');lockerRefresh()}catch(e){console.error(e);skinMsg(fname+' no se pudo usar: '+(e&&e.message||e))}},
   ()=>skinMsg('El archivo no es un .glb válido'))}
@@ -1498,6 +1515,7 @@ function skinDrop(buf,fname){
  addEventListener('dragover',e=>e.preventDefault());
  addEventListener('drop',e=>{e.preventDefault();n=0;document.body.classList.remove('glbdrag');const f=[...(e.dataTransfer.files||[])].find(q=>/\.glb$/i.test(q.name));if(f)f.arrayBuffer().then(b=>skinDrop(b,f.name))})}
 loadJonesy();
+skinScan();
 </script>
 <script id="v6-loading">
 /* ====== v6 · PANTALLAS DE CARGA ======
