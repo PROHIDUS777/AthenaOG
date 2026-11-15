@@ -694,7 +694,7 @@ for(const b of bots){if(b.dead)continue;const d=dt0>0?Math.hypot(b.x-(b.px||b.x)
 for(const n of npcs){if(!n.hips)continue;rest(n);idle(n,t+n.ph||t);if(Math.hypot(P.x-n.x,P.z-n.z)<10){n.ua[1].rotation.set(0,0,2.5);n.ea[1].rotation.z=.5+Math.sin(t*9)*.45}}}
 /* ====== v4: cámara, natación y agua, autobús y ala delta, mirillas, cofres ====== */
 let crouch=false,slideV=0,GLD=0,spread=0,ads=false,FIRED=0,camBlend=0,uw=0,navOK=false,SWT=0,bT=0;
-const SW={x:0,z:0},AIM={o:new T.Vector3(),d:new T.Vector3(0,0,-1)},CAMS={d:5.2,sh:.95,fov:62,eff:5.2,ph:1.6},BUSC={on:false,dist:28,h:5,off:new T.Vector3()},FOGB=new T.Color(),UWC=lin(0x1a7ab8),GLI={dep:0,roll:0,py:0};
+const SW={x:0,z:0},AIM={o:new T.Vector3(),d:new T.Vector3(0,0,-1)},CAMS={d:5.2,sh:.95,fov:62,eff:5.2,ph:1.6},BUSC={on:false,dist:28,h:5,ty:7.5,off:new T.Vector3()},FOGB=new T.Color(),UWC=lin(0x1a7ab8),GLI={dep:0,roll:0,py:0};
 Object.assign(PSt,{sph:0,sj:0,ps:false});RAR.push(['Mítico',0xffd24a],['Exótico',0x2fe0d0]);WP.sn.sp=.03;own[0]=0xf0a030;glCol=0xf0a030;GL[0xf0a030]='Clásica';
 const aw=a=>Math.atan2(Math.sin(a),Math.cos(a)),turnTo=(c,t,m)=>{const d=aw(t-c);return c+Math.max(-m,Math.min(m,d))};
 function noise(x,z,team){for(const b of bots){if(b.dead||b.team===team)continue;if(Math.hypot(b.x-x,b.z-z)<75)b.heard={x,z,t:P.t}}}
@@ -806,8 +806,8 @@ held.position.set(0,-.28+kick*.8,.03);held.rotation.set(1.5708,0,0);held.scale.s
 for(const n of npcs){if(!n.hips)continue;rest(n);idle(n,t+(n.ph||0));if(Math.hypot(P.x-n.x,P.z-n.z)<10){n.ua[1].rotation.set(0,0,2.5);n.ea[1].rotation.z=.5+Math.sin(t*9)*.45}}
 for(const b of bots){if(b.dead||b.ai)continue;const d=dt0>0?Math.hypot(b.x-(b.px||b.x),b.z-(b.pz||b.z))/dt0:0;b.px=b.x;b.pz=b.z;b.vv=lerp(b.vv||0,d,.3);b.ph=(b.ph||0)+b.vv*dt0*1.1;rest(b);if(b.vv<.3)idle(b,t+b.wk);else loco(b,b.ph,Math.min(1,b.vv/6),0);aim2(b,0)}
 if(!lobby){const pc=playerCam(dt0);AIM.o.copy(pc.pos);AIM.d.copy(pc.f);let px=pc.pos.x,py=pc.pos.y,pz=pc.pos.z,fov=pc.fov,tx=px+pc.f.x*30,ty=py+pc.f.y*30,tz=pz+pc.f.z*30;
-if(P.mode=='bus'||camBlend<1){if(P.mode=='bus')camBlend=0;else camBlend=Math.min(1,camBlend+dt0/1.4);const e=camBlend*camBlend*(3-2*camBlend),by=bus.rotation.y,fx=Math.sin(by),fz=Math.cos(by),D=BUSC.dist,bp=bus.position,cp=Math.cos(pitch),ox=Math.sin(yaw)*cp*D,oy=7.5+Math.sin(pitch)*D,oz=Math.cos(yaw)*cp*D;if(!BUSC.on){BUSC.off.set(ox,oy,oz);BUSC.on=true}else{const q=1-Math.exp(-dt0*12);BUSC.off.x+=(ox-BUSC.off.x)*q;BUSC.off.y+=(oy-BUSC.off.y)*q;BUSC.off.z+=(oz-BUSC.off.z)*q}
-px=lerp(bp.x+BUSC.off.x,px,e);py=lerp(bp.y+BUSC.off.y,py,e);pz=lerp(bp.z+BUSC.off.z,pz,e);tx=lerp(bp.x,tx,e);ty=lerp(bp.y+7.5,ty,e);tz=lerp(bp.z,tz,e);fov=lerp(58,fov,e)}
+if(P.mode=='bus'||camBlend<1){if(P.mode=='bus')camBlend=0;else camBlend=Math.min(1,camBlend+dt0/1.4);const e=camBlend*camBlend*(3-2*camBlend),by=bus.rotation.y,fx=Math.sin(by),fz=Math.cos(by),D=BUSC.dist,bp=bus.position,cp=Math.cos(pitch),ox=Math.sin(yaw)*cp*D,oy=BUSC.ty+Math.sin(pitch)*D,oz=Math.cos(yaw)*cp*D;if(!BUSC.on){BUSC.off.set(ox,oy,oz);BUSC.on=true}else{const q=1-Math.exp(-dt0*12);BUSC.off.x+=(ox-BUSC.off.x)*q;BUSC.off.y+=(oy-BUSC.off.y)*q;BUSC.off.z+=(oz-BUSC.off.z)*q}
+px=lerp(bp.x+BUSC.off.x,px,e);py=lerp(bp.y+BUSC.off.y,py,e);pz=lerp(bp.z+BUSC.off.z,pz,e);tx=lerp(bp.x,tx,e);ty=lerp(bp.y+BUSC.ty,ty,e);tz=lerp(bp.z,tz,e);fov=lerp(58,fov,e)}
 cam.position.set(px,py,pz);if(Math.abs(cam.fov-fov)>.01){cam.fov=fov;cam.updateProjectionMatrix()}cam.lookAt(tx,ty,tz)}}
 /* ===== efectos: agua, natación, cofres, mirilla ===== */
 function game3(dt,dt0){wU.t.value=P.t;wU.sunD.value.copy(sdir);const sT=sky.material.uniforms.t.value,sB=sky.material.uniforms.b.value;wU.skyT.value.set(sT.r,sT.g,sT.b);wU.skyB.value.set(sB.r,sB.g,sB.b);wU.fogC.value.set(sB.r,sB.g,sB.b);if(lobby)return;
@@ -1501,6 +1501,7 @@ function loadJonesy(){
   e=>{console.warn('[jonesy.glb]',e);skinMsg('No se encontró jonesy.glb junto al index.html: se usa el Jonesy procedural. Abre la página desde un servidor local o arrastra el .glb a esta ventana.');skinDone()})}
 /* arrastrar un .glb a la ventana: si el nombre coincide con una skin de la lista se usa esa (jonesy.glb vuelve a montar Jonesy); si no, se añade a la TAQUILLA */
 function skinDrop(buf,fname){
+ if(skinKey(fname)=='bus'){busDrop(buf);return}
  if(!T.GLTFLoader){skinMsg('No se pudo cargar GLTFLoader (hace falta internet).');return}
  const key=skinKey(fname);let sk=SKINS.find(q=>[q.file].concat(q.alt||[]).some(f=>skinKey(f)==key));
  new T.GLTFLoader().parse(buf,'',g=>{try{
@@ -1516,6 +1517,42 @@ function skinDrop(buf,fname){
  addEventListener('drop',e=>{e.preventDefault();n=0;document.body.classList.remove('glbdrag');const f=[...(e.dataTransfer.files||[])].find(q=>/\.glb$/i.test(q.name));if(f)f.arrayBuffer().then(b=>skinDrop(b,f.name))})}
 loadJonesy();
 skinScan();
+/* ====== AUTOBÚS DE BATALLA (bus.glb) ======
+   Si hay un bus.glb junto al index.html (o se arrastra a la ventana) SUSTITUYE al autobús procedural.
+   Si no existe o no se puede leer, no pasa nada: se sigue usando el autobús de siempre y no sale ningún mensaje.
+   El modelo se mide, se centra y se escala solo: len = largo del autobús en el juego (el morro debe mirar a +Z, que es lo normal en glTF);
+   rotY = giro extra en grados (180 si sale marcha atrás, 90 / -90 si sale de lado); y = altura extra sobre el suelo del modelo. */
+const BUSGLB={url:'bus.glb',len:12,rotY:0,y:0};
+let busMix=null;
+function busApply(g){
+ const root=g&&(g.scene||(g.scenes&&g.scenes[0]));if(!root)return;
+ const holder=new T.Group(),wrap=new T.Group();wrap.add(root);holder.add(wrap);
+ root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false}});
+ /* se mide con el holder suelto (sin padre), así la medida no depende de dónde esté el autobús ahora mismo */
+ holder.updateMatrixWorld(true);
+ let bb=new T.Box3().setFromObject(holder),sz=bb.getSize(new T.Vector3());
+ if(!isFinite(sz.x+sz.y+sz.z)||sz.x+sz.y+sz.z<=0)return;
+ if(sz.x>sz.z*1.2)wrap.rotation.y=-Math.PI/2;/* eje largo a lo largo de Z */
+ wrap.rotation.y+=BUSGLB.rotY*Math.PI/180;
+ holder.updateMatrixWorld(true);
+ bb=new T.Box3().setFromObject(holder);sz=bb.getSize(new T.Vector3());
+ const big=Math.max(sz.x,sz.z,.0001);wrap.scale.setScalar(BUSGLB.len/big);
+ holder.updateMatrixWorld(true);
+ bb=new T.Box3().setFromObject(holder);const c=bb.getCenter(new T.Vector3());
+ wrap.position.set(-c.x,-bb.min.y+BUSGLB.y,-c.z);
+ holder.updateMatrixWorld(true);
+ bb=new T.Box3().setFromObject(holder);sz=bb.getSize(new T.Vector3());
+ /* animaciones del propio modelo (hélices, banderas…), si las tiene */
+ let mix=null;if(g.animations&&g.animations.length){mix=new T.AnimationMixer(holder);g.animations.forEach(a=>mix.clipAction(a).play())}
+ /* todo bien: ahora sí se sustituye el autobús procedural */
+ while(bus.children.length)bus.remove(bus.children[0]);
+ bus.add(holder);busMix=mix;
+ BUSC.dist=(sz.length()/2)/Math.sin(58*Math.PI/360)*1.3;BUSC.ty=Math.max(3,sz.y*.45);BUSC.on=false}
+function busLoad(){if(!T.GLTFLoader)return;try{new T.GLTFLoader().load(BUSGLB.url,g=>{try{busApply(g)}catch(e){console.warn('[bus.glb]',e)}},undefined,()=>{})}catch(e){}}
+function busDrop(buf){if(!T.GLTFLoader)return;try{new T.GLTFLoader().parse(buf,'',g=>{try{busApply(g)}catch(e){console.warn('[bus.glb]',e)}},()=>{})}catch(e){}}
+{const game3Bus=game3;game3=function(dt,dt0){game3Bus(dt,dt0);if(busMix&&bus.visible)try{busMix.update(dt0)}catch(e){busMix=null}}}
+busLoad();
+
 </script>
 <script id="v6-loading">
 /* ====== v6 · PANTALLAS DE CARGA ======
