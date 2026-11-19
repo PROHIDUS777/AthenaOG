@@ -88,7 +88,7 @@ body.no-reticle #xh,body.no-health #hp .br,body.no-sprint #sb,body.no-minimap #m
 
 #ld1 #testo{margin-top:25vh;text-align:center;white-space:nowrap;z-index:3}
 /* v10: logo.png de la pantalla de inicio (alto fijo respecto a la ventana, sin deformarse, con un balanceo suave) */
-#ld1 #ld1Logo{display:block;margin:0 auto;height:26vh;width:auto;max-width:82vw;object-fit:contain;pointer-events:none;filter:drop-shadow(0 10px 18px rgba(0,0,0,.5));animation:ld1LogoFloat 6s ease-in-out infinite}
+#ld1 #ld1Logo{display:block;margin:0 auto;height:17vh;width:auto;max-width:60vw;object-fit:contain;pointer-events:none;filter:drop-shadow(0 10px 18px rgba(0,0,0,.5));animation:ld1LogoFloat 6s ease-in-out infinite}
 @keyframes ld1LogoFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.025)}}
 @media(prefers-reduced-motion:reduce){#ld1 #ld1Logo{animation:none}}
 #ld1 h1{color:#fff;position:relative;font-family:'Luckiest Guy','Impact',sans-serif;font-size:110px;font-weight:400;font-style:normal;display:inline-block;letter-spacing:-2px;text-shadow:0 10px 20px rgba(0,0,0,.5),0 0 12px rgba(255,255,255,.45);transform-origin:bottom center;margin:0;padding:0}
@@ -426,7 +426,7 @@ const glider=new T.Mesh(new T.BoxGeometry(4,.12,2.2),M(0x69c8f0));glider.positio
 let yaw=0,pitch=.35;const K={};
 addEventListener('keydown',e=>{K[e.code]=1;if(e.code=='KeyT'){tIdx=(tIdx+1)%3;setTime(tIdx)}if(e.code=='Space')e.preventDefault()});addEventListener('keyup',e=>K[e.code]=0);
 const cv=R.domElement,go=document.getElementById('go');let locked=false;
-cv.onclick=()=>{try{cv.requestPointerLock()}catch(e){}};
+cv.onclick=()=>{try{Promise.resolve(cv.requestPointerLock()).catch(()=>{})}catch(e){}};
 document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement==cv);
 addEventListener('mousemove',e=>{if(locked||e.buttons){yaw-=e.movementX*.0025;pitch=Math.max(-.2,Math.min(1.25,pitch+e.movementY*.0025))}});
 function tp(i){const p=POI[i];P.x=p.x;P.z=p.z+60;P.y=H(p.x,p.z)+150;P.vy=0;P.mode='glide';yaw=0;pitch=.5}
@@ -484,9 +484,9 @@ const stage=new T.Group();{const mk=(r,c,x,y,z,bas)=>{const m=new T.Mesh(new T.C
 function lobbySky(){sky.material.uniforms.t.value.setHex(0x7a2ea8);sky.material.uniforms.b.value.setHex(0xff4f9a);scene.fog.color.copy(lin(0xff6aa8));hemi.intensity=1.1;sun.color.copy(lin(0xffd0e8));R.toneMappingExposure=1.05}
 function toLobby(){playing=false;paused=false;lobby=true;document.body.classList.add('lobby');go.style.display='block';['end','pz','scr'].forEach(i=>$(i).style.display='none');bus.visible=false;P.mode='lobby';P.x=0;P.z=0;P.y=1500;rig.visible=true;document.exitPointerLock&&document.exitPointerLock();lobbySky();scr('PLAY');$('scr').style.display='none'}
 function reset(){DN.clear();hp=100;sh=0;stam=100;exh=false;kills=0;sel=0;A.s=12;A.m=90;A.l=90;A.h=8;inv=[{t:'p'},null,null,null,null,null];holdUpdate();spawnBots();planStorm();spawnLoot();chests.forEach(c=>{c.st=0;c.o=0;c.lid.rotation.x=0;c.gl.visible=true});$('feed').innerHTML='';ui()}
-function start(){reset();lobby=false;document.body.classList.remove('lobby');go.style.display='none';setTime(tIdx);bus.visible=true;BT=0;bus.rotation.y=Math.atan2(960,660);P.mode='bus';yaw=Math.atan2(-960,-660);pitch=.4;playing=true;stats.g++;snd(500,.3,'sine',.1,900);msgS('ESPACIO: saltar del autobús',6);try{cv.requestPointerLock()}catch(e){}}
+function start(){reset();lobby=false;document.body.classList.remove('lobby');go.style.display='none';setTime(tIdx);bus.visible=true;BT=0;bus.rotation.y=Math.atan2(960,660);P.mode='bus';yaw=Math.atan2(-960,-660);pitch=.4;playing=true;stats.g++;snd(500,.3,'sine',.1,900);msgS('ESPACIO: saltar del autobús',6);try{Promise.resolve(cv.requestPointerLock()).catch(()=>{})}catch(e){}}
 function jump(){if(P.mode=='bus'){P.mode='fall';P.vy=-5;msgS('ESPACIO: abrir ala delta',4)}}
-function resume(){paused=false;playing=true;$('pz').style.display='none';try{cv.requestPointerLock()}catch(e){}}
+function resume(){paused=false;playing=true;$('pz').style.display='none';try{Promise.resolve(cv.requestPointerLock()).catch(()=>{})}catch(e){}}
 function msgS(t,s){$('msg').textContent=t;$('msg').style.opacity=1;msgT=s}
 function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.opacity=0,2200)}
 const GL={0x69c8f0:'Azul',0xf0503a:'Rojo',0x58e060:'Verde',0xf0c030:'Dorado'};
@@ -528,7 +528,7 @@ const cis=[...cmp.querySelectorAll('.cmp-tick,.cmp-mark')];
 const compassDir=d=>{const names=['N','NE','E','SE','S','SO','O','NO'];return names[Math.round((((d%360)+360)%360)/45)%8]};
 addEventListener('keydown',e=>{if(e.code=='Space'&&playing){if(P.mode=='bus')jump();else if(P.mode=='fall')P.mode='glide';else if(P.mode=='swim')fishJump()}if(!playing)return;if(e.code=='KeyE')useE=1;if(e.code=='KeyR')reload();const n=e.code.startsWith('Digit')?+e.code[5]:0;if(n>=1&&n<=6){sel=n-1;holdUpdate();ui()}});
 addEventListener('mousedown',e=>{if(e.button==0)mdown=true});addEventListener('mouseup',()=>mdown=false);
-cv.onclick=()=>{if(playing)try{cv.requestPointerLock()}catch(e){}};let hadLock=false;document.addEventListener('pointerlockchange',()=>{const on=document.pointerLockElement==cv;if(!on&&hadLock&&playing&&!paused){paused=true;playing=false;$('pz').style.display='flex'}hadLock=on});
+cv.onclick=()=>{if(playing)try{Promise.resolve(cv.requestPointerLock()).catch(()=>{})}catch(e){}};let hadLock=false;document.addEventListener('pointerlockchange',()=>{const on=document.pointerLockElement==cv;if(!on&&hadLock&&playing&&!paused){paused=true;playing=false;$('pz').style.display='flex'}hadLock=on});
 document.addEventListener('pointerlockerror',()=>{if(playing)toast('Ratón no capturado: mantén el botón izquierdo y arrastra para mirar (Esc = pausa)')});
 addEventListener('keydown',e=>{if(e.code=='Escape'&&playing&&!paused&&!document.pointerLockElement&&$('scr').style.display!='block'){paused=true;playing=false;$('pz').style.display='flex'}});
 toLobby();
@@ -785,7 +785,7 @@ let hit=CAMS.d;for(let i=1;i<=14;i++){const u=i/14,x=_pv.x-_f.x*CAMS.d*u,y=_pv.y
 /* eventos: agacharse con bloqueo (Ctrl/C), deslizarse (Shift+Ctrl), apuntar con botón derecho */
 addEventListener('keydown',e=>{if(!playing||e.repeat)return;if(e.code=='ControlLeft'||e.code=='ControlRight'||e.code=='KeyC'){if(P.mode!='ground')return;if(sprAct&&slide<=0&&P.y<=H(P.x,P.z)+.2&&(K.ShiftLeft||K.ShiftRight))slideBegin();else if(slide>0)slideEnd(false);else crouch=!crouch}});
 addEventListener('mousedown',e=>{if(e.button==2&&playing)ads=true});addEventListener('mouseup',e=>{if(e.button==2)ads=false});addEventListener('contextmenu',e=>e.preventDefault());addEventListener('mousemove',e=>{if(ads&&(locked||e.buttons)){yaw+=e.movementX*.0025*.45;pitch=Math.max(-.2,Math.min(1.25,pitch-e.movementY*.0025*.45))}});
-function start(){reset();lobby=false;document.body.classList.remove('lobby');go.style.display='none';setTime(tIdx);bus.visible=true;BT=0;bus.rotation.y=Math.atan2(960,660);P.mode='bus';yaw=Math.atan2(-960,-660);pitch=.4;playing=true;stats.g++;crouch=false;slide=0;slideV=0;FJ.on=false;FJ.cd=0;AIRV=null;SLP.rec=0;PSt.sr=0;PSt.sw=0;GLD=0;GLI.dep=0;camBlend=0;BUSC.on=false;em=null;ads=false;SW.x=SW.z=0;CAMS.eff=CAMS.d=5.2;if(!navOK&&typeof navBuild=='function')navBuild();snd(500,.3,'sine',.1,900);msgS('ESPACIO: saltar del autobús',6);try{cv.requestPointerLock()}catch(e){}}
+function start(){reset();lobby=false;document.body.classList.remove('lobby');go.style.display='none';setTime(tIdx);bus.visible=true;BT=0;bus.rotation.y=Math.atan2(960,660);P.mode='bus';yaw=Math.atan2(-960,-660);pitch=.4;playing=true;stats.g++;crouch=false;slide=0;slideV=0;FJ.on=false;FJ.cd=0;AIRV=null;SLP.rec=0;PSt.sr=0;PSt.sw=0;GLD=0;GLI.dep=0;camBlend=0;BUSC.on=false;em=null;ads=false;SW.x=SW.z=0;CAMS.eff=CAMS.d=5.2;if(!navOK&&typeof navBuild=='function')navBuild();snd(500,.3,'sine',.1,900);msgS('ESPACIO: saltar del autobús',6);try{Promise.resolve(cv.requestPointerLock()).catch(()=>{})}catch(e){}}
 /* ===== bucle de animación + cámara (se ejecuta después de game) ===== */
 function game2(dt,dt0){const c=me,t=P.t,hy=H(P.x,P.z),depth=-hy,s=inv[sel];const v=dt0>0?Math.hypot(P.x-PSt.px,P.z-PSt.pz)/dt0:0;PSt.v=(P.mode=='bus'||P.mode=='lobby')?0:lerp(PSt.v,Math.min(v,22),Math.min(1,dt0*14));PSt.px=P.x;PSt.pz=P.z;if(wOpen){yaw=wY;pitch=wP}
 if(playing){const m=P.mode;if((m=='fall'||m=='glide')&&P.y<=.5&&depth>.6)enterSwim(P.vy);else if(m=='ground'&&depth>1.1&&P.y<=.45&&!(pd(rivs,P.x,P.z)<10&&depth<2.2))enterSwim(P.vy);else if(m=='swim'&&(depth<.75||(pd(rivs,P.x,P.z)<10&&depth<2.2&&!FJ.on))){P.mode='ground';splash(P.x,P.z,.35);crouch=false}if(P.mode=='glide')GLD=Math.min(1,GLD+dt/.9);else GLD=0}
@@ -1242,7 +1242,6 @@ const SKINS=[
  {id:'ghoul',name:'Ghoul',file:'Ghoul.glb'},
  {id:'cr7',name:'Cristiano Ronaldo',file:'Cr7.glb'},
  {id:'messi',name:'Lionel Messi',file:'Messi.glb'},
- {id:'ishowspeed',name:'IShowSpeed',file:'lshowspeed.glb',alt:['IShowSpeed.glb']},
  {id:'travis',name:'Travis Scott',file:'travis.glb'},
  {id:'homer',name:'Homer Simpson',file:'Homer.glb'},
  {id:'buzz',name:'Buzz Lightyear',file:'buzzlightyear.glb'},
@@ -2002,7 +2001,7 @@ const DESC={
  jonesy:['El primer héroe en llegar a la isla.'],agentebananin:['Máxima seguridad, máxima fruta.'],ositorosa:['Abrazos para todos, incluso en pleno combate.'],
  fishstick:['Sin espinas y sin miedo.'],renegada:['Una rebelde no pide permiso.'],bombardera:['Cae del cielo y no pide perdón.'],giddyup:['Al galope hacia la victoria.'],
  arbustin:['Camuflaje de fiesta para el invierno.'],trooper:['Disciplina de acero en primera línea.'],ghoul:['Una sombra que se alimenta de la noche.'],
- cr7:['Siempre listo para marcar el siguiente gol.'],messi:['La magia está en cada pase.'],ishowspeed:['Energía al máximo, gritos incluidos.'],travis:['Directo desde el escenario.'],
+ cr7:['Siempre listo para marcar el siguiente gol.'],messi:['La magia está en cada pase.'],travis:['Directo desde el escenario.'],
  homer:['¡D\'oh! Pero con mucho estilo.'],buzz:['Hasta el infinito y más allá.'],chunli:['La luchadora más rápida del mundo.'],thanos:['Inevitable.'],
  godzilla:['El rey de los monstruos pisa la isla.'],lizard:['Mitad científico, mitad reptil.'],cj:['Vuelve a casa, y a por todo.']};
 const LK={open:false,tab:'OUTFIT',sel:null,pend:null,selT:0,q:'',favOnly:false,sort:0,rev:false,rot:.22,rotT:.22,drag:null,td:null,fav:{},cc:{},gc:{},sig:'',h:0,ik:''};
@@ -2253,6 +2252,7 @@ addEventListener('resize',()=>{if(LK.open)requestAnimationFrame(lkSb)});
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const CFG={
  dir:'animaciones/',/* carpeta de los .fbx, junto al index.html */
+ dirs:['animaciones/','Animaciones/','animations/','Animations/',''],/* carpetas alternativas que se prueban si la primera da 404 (GitHub Pages distingue mayúsculas) */
  files:{/* clave → nombres posibles del archivo (el primero es el oficial; los demás por si el servidor distingue mayúsculas o espacios) */
   walk:['RifleWalk.fbx'],
   rrun:['Rifle Run.fbx','RifleRun.fbx','Rifle_Run.fbx'],
@@ -2317,7 +2317,8 @@ function toLocal(c){
 /* ---------- carga ---------- */
 function loadClip(k){
  const names=CFG.files[k],ld=new T.FBXLoader();
- return new Promise((res,rej)=>{const next=i=>ld.load(CFG.dir+encodeURI(names[i]),res,undefined,e=>i+1<names.length?next(i+1):rej(e));next(0)}).then(fbx=>{
+ const urls=[];for(const d of CFG.dirs)for(const n of names)urls.push(d+encodeURI(n));
+ return new Promise((res,rej)=>{const next=i=>ld.load(urls[i],res,undefined,e=>i+1<urls.length?next(i+1):rej(e));next(0)}).then(fbx=>{
   const S=prepSource(fbx,names[0]);S.key=k;
   console.info('[FBX] '+names[0]+' · '+S.dur.toFixed(2)+' s · pistas '+S.tracks+' · huesos '+S.drive.map(d=>d.id+'='+d.b.name).join(', ')+' · giro '+((S.yaw*180/Math.PI)%360).toFixed(0)+'°'+(S.swapped?' · (lados intercambiados)':''));
   return S})}
