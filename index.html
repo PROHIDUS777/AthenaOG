@@ -299,6 +299,9 @@ body :not(#ld1):not(#ld1 *):not(#ld2):not(#ld2 *):not(#nav):not(#nav *):not(#lk)
 <script>if(window.THREE&&!THREE.GLTFLoader){document.write('<script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"><\/script>')}</script>
 <script>if(window.THREE){document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"><\/script>')}</script>
 <script>if(window.THREE&&!THREE.SkeletonUtils){document.write('<script src="https://unpkg.com/three@0.128.0/examples/js/utils/SkeletonUtils.js"><\/script>')}</script>
+<!-- v9: FBXLoader (+ librerías de descompresión que usa para los FBX binarios) del mismo CDN de three.js r128 -->
+<script>if(window.THREE){document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/inflate.min.js"><\/script>');document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"><\/script>');document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"><\/script>')}</script>
+<script>if(window.THREE&&!THREE.FBXLoader){document.write('<script src="https://unpkg.com/three@0.128.0/examples/js/libs/inflate.min.js"><\/script>');document.write('<script src="https://unpkg.com/three@0.128.0/examples/js/libs/fflate.min.js"><\/script>');document.write('<script src="https://unpkg.com/three@0.128.0/examples/js/loaders/FBXLoader.js"><\/script>')}</script>
 <script>if(!window.THREE){document.addEventListener("DOMContentLoaded",function(){var m=document.createElement("div");m.style.cssText="position:fixed;inset:0;z-index:300;background:#0b1a4a;color:#fff;font:700 18px Arial;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px";m.innerHTML="No se pudo cargar three.js (hace falta conexión a internet).<br>Comprueba la red y recarga la página.";document.body.appendChild(m)})}</script>
 <script>
 addEventListener('error',e=>err(e.error||e.message));addEventListener('unhandledrejection',e=>err(e.reason));
@@ -2217,6 +2220,196 @@ function lkFrame(dt0){
  if(Math.abs(cam.filmOffset-fo)>1e-3){cam.filmOffset=fo;cam.updateProjectionMatrix()}}
 {const _g3=game3;game3=function(dt,dt0){_g3(dt,dt0);if(LK.open)try{lkFrame(dt0)}catch(e){console.error('[v8-locker]',e)}}}
 addEventListener('resize',()=>{if(LK.open)requestAnimationFrame(lkSb)});
+})();
+</script>
+<script id="v9-fbx">
+/* ====== v9 · ANIMACIONES FBX (carpeta animaciones/) + PICO POR CÓDIGO ======
+   1) Carga con THREE.FBXLoader los 7 archivos de animaciones/ :
+        RifleWalk.fbx          → caminar (normal, con o sin arma)
+        Rifle Run.fbx          → esprintar con un arma (rifle) en la barra
+        Run.fbx                → esprintar sin arma / con pico / con objetos
+        RifleAgachado.fbx      → quieto agachado
+        AndarAgachadoRifle.fbx → andar agachado
+        Treading Water.fbx     → flotar quieto en el agua
+        Swim.fbx               → nadar avanzando
+      En vez de SkeletonUtils.retargetClip (que exigiría que cada skin .glb tuviera huesos con los mismos nombres y el mismo reposo), cada FBX se
+      mueve en un esqueleto oculto, se lleva a la misma pose de reposo que usan las skins (brazos y piernas rectos, misma orientación) y su pose
+      se traduce al esqueleto procedural del juego (cadera, columna, cabeza, brazos, antebrazos, muslos, rodillas y pies). Ese esqueleto es el que
+      ya mueve TODAS las skins (.glb) y el Jonesy procedural, así que cualquier skin usa estas animaciones sin tocar sus huesos.
+      Mezcla con pesos suavizados: al soltar el FBX (saltar, aterrizar, deslizarse, apuntar, emotes, lobby, planear, caer, salto de pez, modo construcción)
+      el peso baja a 0 y vuelven EXACTAMENTE las animaciones de siempre. Quieto de pie sigue siendo la animación procedural (no hay FBX de "idle").
+   2) PICO por código (de pie, andando o agachado): las piernas siguen con los FBX de arriba, pero los brazos (RightArm, RightForeArm, LeftArm, LeftForeArm
+      de tu modelo) se sobrescriben cada frame con una guardia a dos manos (IK de dos huesos → mismo sistema que usan las armas). Al hacer clic izquierdo:
+      swing de 0,35 s (seno/interpolación): levanta los brazos y golpea en diagonal hacia abajo; igual de pie, andando o agachado.
+   3) No toca: lobby, saltar/aterrizar, apuntar (ni los pesos ni las prioridades). Si algo falla se vuelve a las animaciones procedurales. */
+(function(){
+'use strict';
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const CFG={
+ dir:'animaciones/',/* carpeta de los .fbx, junto al index.html */
+ files:{/* clave → nombres posibles del archivo (el primero es el oficial; los demás por si el servidor distingue mayúsculas o espacios) */
+  walk:['RifleWalk.fbx'],
+  rrun:['Rifle Run.fbx','RifleRun.fbx','Rifle_Run.fbx'],
+  run:['Run.fbx'],
+  cidle:['RifleAgachado.fbx'],
+  cwalk:['AndarAgachadoRifle.fbx'],
+  tread:['Treading Water.fbx','TreadingWater.fbx','Treading_Water.fbx'],
+  swim:['Swim.fbx']},
+ fade:12,/* velocidad de la mezcla FBX ↔ procedural (1/s; más alto = cambio más rápido) */
+ /* velocidad de reproducción de cada FBX según la velocidad real del jugador (m/s). Si los pasos se ven demasiado rápidos o lentos, cambia aquí */
+ rate:{walk:v=>clamp(.35+v/6.5,.6,1.5),rrun:v=>clamp(v/9,.8,1.5),run:v=>clamp(v/9,.8,1.5),cwalk:v=>clamp(v/1.8,.5,1.8),cidle:()=>1,tread:()=>1,swim:v=>clamp(.6+v/6,.9,1.8)},
+ pick:{dur:.35,fade:12,grip:.27}/* duración del golpe (s), velocidad de entrada/salida de la guardia y separación de las manos en el mango (m) */
+};
+const IDS=['hips','spine','head','ua0','ua1','ea0','ea1','th0','th1','kn0','kn1','ft0','ft1'];
+const MAP={hips:['hips',0],spine:['spine',0],head:['head',0],ua0:['ua',0],ua1:['ua',1],ea0:['ea',0],ea1:['ea',1],th0:['th',0],th1:['th',1],kn0:['kn',0],kn1:['kn',1],ft0:['ft',0],ft1:['ft',1]};
+const GROUND=['walk','rrun','run','cidle','cwalk'];
+const FB={cl:{},w:{},fail:[],on:true,err:0,lt:0,ran:false,wPk:0,loaded:0,total:Object.keys(CFG.files).length};
+const PW={};for(const id of IDS)PW[id]=new T.Quaternion();
+const _qa=new T.Quaternion(),_qb=new T.Quaternion(),_qc=new T.Quaternion();
+const bld=()=>{const b=window.BUILD&&window.BUILD.B;return!!(b&&(b.on||b.ed))};
+
+/* ---------- 1 · preparar un FBX como "fuente de poses" ---------- */
+function bestClip(list){let b=null;for(const c of list||[])if(c&&c.tracks&&c.tracks.length&&(!b||c.duration>b.duration))b=c;return b}
+function prepSource(root,name){
+ root.traverse(o=>{if(o.isMesh||o.isSkinnedMesh)o.visible=false});
+ const G=new T.Group();G.add(root);G.updateMatrixWorld(true);
+ let nb=0;root.traverse(o=>{if(o.isBone)nb++});
+ if(nb<10)root.traverse(o=>{if(o!==root&&!o.isMesh&&!o.isLight&&!o.isCamera)o.isBone=true});/* FBX sin huesos "Bone": los nodos hacen de hueso */
+ const m=findBones(root);
+ if(!(m.hips&&m.spine&&m.th[0]&&m.th[1]&&m.kn[0]&&m.kn[1]&&m.ua[0]&&m.ua[1]&&m.ea[0]&&m.ea[1]))throw new Error('no se reconoció el esqueleto (cadera/columna/brazos/piernas)');
+ const clip=bestClip(root.animations);if(!clip)throw new Error('el FBX no trae ninguna animación');
+ /* orientación (misma lógica que buildSkin): eje lateral = de la cadera derecha a la izquierda; el modelo se gira para que ese eje sea +X */
+ const Lh=new T.Vector3(),Ft=new T.Vector3(),pR=posHolder(m.th[0],G),pL=posHolder(m.th[1],G);Lh.set(pL.x-pR.x,0,pL.z-pR.z);
+ for(let i=0;i<2;i++){const bl=m.ft[i]&&kidOf(m.ft[i],/ball|toe/);if(bl)Ft.add(posHolder(bl,G).sub(posHolder(m.ft[i],G)))}Ft.y=0;
+ let swapped=false;
+ if(Lh.length()>1e-6&&Ft.length()>.25*Lh.length()&&new T.Vector3().crossVectors(Lh,Y_UP).dot(Ft)<0){for(const k of['ua','ea','th','kn','ft'])m[k].reverse();Lh.negate();swapped=true}
+ if(Lh.lengthSq()<1e-12)Lh.set(1,0,0);Lh.normalize();
+ const yaw=Math.atan2(Lh.z,Lh.x),Rh=new T.Quaternion().setFromAxisAngle(Y_UP,yaw),Rhi=Rh.clone().conjugate();
+ /* reposo normalizado: brazos y piernas rectos hacia abajo (T-pose o A-pose da igual), igual que las skins */
+ const f0=[0,1].map(i=>m.ft[i]?relQ(m.ft[i],G,new T.Quaternion()):null);
+ for(let i=0;i<2;i++){
+  if(m.ua[i]&&m.ea[i]){const tg=new T.Vector3().copy(Lh).multiplyScalar((i?1:-1)*Math.sin(JONESY.armSpread));tg.y=-Math.cos(JONESY.armSpread);
+   turnBone(m.ua[i],new T.Quaternion().setFromUnitVectors(dirHolder(m.ua[i],m.ea[i],G),tg),G);
+   const hd=kidOf(m.ea[i],/hand|wrist/);if(hd)turnBone(m.ea[i],new T.Quaternion().setFromUnitVectors(dirHolder(m.ea[i],hd,G),tg),G)}
+  if(m.th[i]&&m.kn[i]){turnBone(m.th[i],new T.Quaternion().setFromUnitVectors(dirHolder(m.th[i],m.kn[i],G),Y_DN),G);
+   if(m.ft[i])turnBone(m.kn[i],new T.Quaternion().setFromUnitVectors(dirHolder(m.kn[i],m.ft[i],G),Y_DN),G)}
+  if(m.ft[i]&&f0[i]){m.ft[i].quaternion.copy(relQ(m.ft[i].parent,G,_qa).conjugate().multiply(f0[i]));G.updateMatrixWorld(true)}}
+ const chain=spineChain(m.spine),drive=[],out={};
+ const add=(id,b)=>{if(b){drive.push({id,b,WnI:relQ(b,G,new T.Quaternion()).conjugate()});out[id]=new T.Quaternion()}};
+ add('hips',m.hips);add('spine',chain[chain.length-1]);add('head',m.head);
+ for(let i=0;i<2;i++){add('ua'+i,m.ua[i]);add('ea'+i,m.ea[i]);add('th'+i,m.th[i]);add('kn'+i,m.kn[i]);add('ft'+i,m.ft[i])}
+ const mixer=new T.AnimationMixer(root),act=mixer.clipAction(clip);act.setLoop(T.LoopRepeat,Infinity);act.play();
+ return{name,G,root,m,Rh,Rhi,yaw,drive,out,mixer,act,dur:clip.duration,swapped,tracks:clip.tracks.length,chain:chain.length}}
+/* pose actual de la fuente → orientación "mundial" respecto al reposo, en el marco del juego: P = Rh · (a · Wn⁻¹) · Rh⁻¹  (es la inversa exacta de lo que hace skinUpdate: a = Rh⁻¹ · P · Rh · Wn) */
+function sample(S){for(const d of S.drive)S.out[d.id].copy(S.Rh).multiply(relQ(d.b,S.G,_qa).multiply(d.WnI)).multiply(S.Rhi)}
+/* orientaciones "mundiales" PW → rotaciones locales del esqueleto procedural (inversa de procQ) */
+function toLocal(c){
+ const L=(p,k,dst)=>dst.copy(PW[p]).conjugate().multiply(PW[k]);
+ c.hips.quaternion.copy(PW.hips);L('hips','spine',c.sp.quaternion);L('spine','head',c.hd.quaternion);
+ for(let i=0;i<2;i++){L('spine','ua'+i,c.ua[i].quaternion);L('ua'+i,'ea'+i,c.ea[i].quaternion);L('hips','th'+i,c.th[i].quaternion);L('th'+i,'kn'+i,c.kn[i].quaternion);L('kn'+i,'ft'+i,c.ft[i].quaternion)}}
+
+/* ---------- carga ---------- */
+function loadClip(k){
+ const names=CFG.files[k],ld=new T.FBXLoader();
+ return new Promise((res,rej)=>{const next=i=>ld.load(CFG.dir+encodeURI(names[i]),res,undefined,e=>i+1<names.length?next(i+1):rej(e));next(0)}).then(fbx=>{
+  const S=prepSource(fbx,names[0]);S.key=k;
+  console.info('[FBX] '+names[0]+' · '+S.dur.toFixed(2)+' s · pistas '+S.tracks+' · huesos '+S.drive.map(d=>d.id+'='+d.b.name).join(', ')+' · giro '+((S.yaw*180/Math.PI)%360).toFixed(0)+'°'+(S.swapped?' · (lados intercambiados)':''));
+  return S})}
+function loadAll(){
+ if(!T.FBXLoader){console.warn('[FBX] FBXLoader no disponible (hace falta internet para el CDN): se usan las animaciones procedurales de siempre');return}
+ const keys=Object.keys(CFG.files);let pending=keys.length;
+ keys.forEach(k=>loadClip(k).then(S=>{FB.cl[k]=S;FB.w[k]=0;FB.loaded++},e=>{FB.fail.push(CFG.files[k][0]);console.warn('[FBX] no se pudo usar '+CFG.dir+CFG.files[k][0]+':',e&&e.message||e)}).then(()=>{
+  if(--pending)return;
+  console.info('[FBX] animaciones listas: '+FB.loaded+'/'+keys.length+(FB.fail.length?' · faltan: '+FB.fail.join(', '):''));
+  if(FB.fail.length){try{toast('Animaciones FBX no cargadas: '+FB.fail.join(', ')+' (carpeta "'+CFG.dir+'"). Se usan las de siempre.')}catch(e){}}}))}
+
+/* ---------- estados y pesos ---------- */
+function targets(s){
+ const t={walk:0,rrun:0,run:0,cidle:0,cwalk:0,tread:0,swim:0},mode=P.mode;
+ let ok=FB.on&&playing&&!lobby&&!paused&&!em&&(mode=='ground'||mode=='swim')&&!bld();
+ if(ok){if(mode=='ground'){if(P.y>H(P.x,P.z)+.25||slide>0||(PSt.land||0)>0||(PSt.sw||0)>.003)ok=false}else if(FJ.on)ok=false}
+ if(ok&&Math.max(PSt.wa||0,PSt.wh||0)>.02)ok=false;/* apuntar / disparar: manda la animación de apuntar de siempre */
+ if(!ok)return t;
+ const v=PSt.v;
+ if(mode=='swim'){const k=sm(v,.5,2.2);t.tread=1-k;t.swim=k;return t}
+ const cw=PSt.cw||0,st=1-cw,km=sm(v,.25,1.4),mv=sm(v,.25,1.2),sp=sprAct?sm(v,6,10):0;
+ const rk=((s&&s.t=='w')?['rrun','run','walk']:['run','rrun','walk']).find(k=>FB.cl[k])||'walk';
+ t[rk]+=st*sp;t.walk+=st*mv*(1-sp);t.cidle=cw*(1-km);t.cwalk=cw*km;
+ return t}
+
+/* ---------- 2 · PICO ---------- */
+const KF={/* marco del torso: +X = izquierda, +Y = arriba, +Z = delante · T = palma derecha, h = dirección del mango (hacia la cabeza del pico), lean/twist = inclinación y giro del torso */
+ guard:{T:[-.10,.20,.32],h:[.645,.71,.258],lean:0,twist:0},
+ raise:{T:[-.20,.84,.02],h:[.62,.52,-.59],lean:-.2,twist:-.18},
+ strike:{T:[-.06,.36,.20],h:[.40,-.30,.87],lean:.34,twist:.2}};
+for(const k in KF)KF[k].hv=new T.Vector3(...KF[k].h).normalize();
+const PK={t:9,dur:CFG.pick.dur,T:[0,0,0],Tl:[0,0,0],h:new T.Vector3(),lean:0,twist:0,go(){this.t=0}};
+const RV=new T.Vector3().copy(KF.strike.hv).sub(KF.raise.hv).normalize();/* plano del golpe: la cabeza del pico gira dentro de él */
+const eo=p=>Math.sin(p*Math.PI/2),ei=p=>p*p,es=p=>p*p*(3-2*p);
+function pkPose(u){
+ let a,b,p;
+ if(u<.38){a=KF.guard;b=KF.raise;p=eo(u/.38)}/* subir los brazos (frena al llegar arriba) */
+ else if(u<.72){a=KF.raise;b=KF.strike;p=ei((u-.38)/.34)}/* golpe diagonal hacia abajo (acelera) */
+ else{a=KF.strike;b=KF.guard;p=es((u-.72)/.28)}/* volver a la guardia */
+ for(let i=0;i<3;i++)PK.T[i]=a.T[i]+(b.T[i]-a.T[i])*p;
+ PK.h.copy(a.hv).lerp(b.hv,p).normalize();PK.lean=a.lean+(b.lean-a.lean)*p;PK.twist=a.twist+(b.twist-a.twist)*p;
+ const g=CFG.pick.grip;for(let i=0;i<3;i++)PK.Tl[i]=PK.T[i]+PK.h.getComponent(i)*g}
+const _ex=new T.Vector3(),_ez=new T.Vector3(),_mb=new T.Matrix4(),_X=new T.Vector3(1,0,0),_Y=new T.Vector3(0,1,0),_hp=new T.Vector3(),QX12=new T.Quaternion().setFromAxisAngle(_X,-1.2);/* pick() ya inclina su grupo 1,2 rad en X */
+function pickQ(h,out){_ex.copy(RV).addScaledVector(h,-RV.dot(h));if(_ex.lengthSq()<1e-6)_ex.set(1,0,0).addScaledVector(h,-h.x);_ex.normalize();_ez.crossVectors(_ex,h);_mb.makeBasis(_ex,h,_ez);return out.setFromRotationMatrix(_mb)}
+/* IK analítico de dos huesos para el brazo procedural (mismo método que armIKSkin de las skins): el codo cae hacia abajo y fuera; devuelve las rotaciones LOCALES de hombro y antebrazo (en el marco del torso).
+   Las dimensiones son las del brazo procedural (AL1/AL2, hombros en x = ±0,37 y = 0,56). El antebrazo solo se dobla en su eje X (bisagra) y el hombro tiene 3 grados de libertad. */
+const _s=new T.Vector3(),_r=new T.Vector3(),_dd=new T.Vector3(),_pp=new T.Vector3(),_E=new T.Vector3(),_d1=new T.Vector3(),_d2=new T.Vector3(),_az=new T.Vector3(),_ey=new T.Vector3(),_ew=new T.Vector3(),_pl=new T.Vector3();
+function armPose(i,Tg,qU,qE){
+ const L1=AL1,L2=AL2;_s.set(i?.37:-.37,.56,0);_r.set(Tg[0],Tg[1],Tg[2]).sub(_s);let d=_r.length();if(d<1e-6){_r.set(0,-1,0);d=1}
+ _dd.copy(_r).multiplyScalar(1/d);d=clamp(d,.16,L1+L2-.004);
+ const a=(L1*L1-L2*L2+d*d)/(2*d),h=Math.sqrt(Math.max(0,L1*L1-a*a));
+ _pl.set(i?.3:-.45,-1,-.2);_pp.copy(_pl).addScaledVector(_dd,-_pl.dot(_dd));if(_pp.lengthSq()<1e-8)_pp.set(0,-1,0).addScaledVector(_dd,_dd.y);_pp.normalize();
+ _E.copy(_s).addScaledVector(_dd,a).addScaledVector(_pp,h);
+ _d1.copy(_E).sub(_s).normalize();_d2.copy(_s).addScaledVector(_dd,d).sub(_E).normalize();
+ const ce=clamp(_d1.dot(_d2),-1,1),e=-Math.acos(ce),se=Math.abs(Math.sin(e));/* flexión del codo (negativa = antebrazo hacia delante) */
+ if(se>1e-4)_az.copy(_d2).addScaledVector(_d1,-ce).multiplyScalar(1/se);else _az.copy(_pp).addScaledVector(_d1,-_pp.dot(_d1)).normalize();/* eje Z local del hombro: hacia donde se dobla el codo */
+ _ey.copy(_d1).multiplyScalar(-1);_ew.crossVectors(_ey,_az);_mb.makeBasis(_ew,_ey,_az);qU.setFromRotationMatrix(_mb);qE.setFromAxisAngle(_X,e);return e}
+function pickaxe(c,dt0,s){
+ const on=!!(s&&s.t=='p'&&P.mode=='ground'&&playing&&!lobby&&!paused&&!em&&slide<=0&&!sprAct&&held.visible&&!bld()&&P.y<=H(P.x,P.z)+.25&&!((PSt.land||0)>0));
+ FB.wPk+=((on?1:0)-FB.wPk)*(1-Math.exp(-dt0*CFG.pick.fade));
+ if(FB.wPk<.003){FB.wPk=0;PK.t=Math.max(PK.t,1);return}
+ const w=FB.wPk;PK.t+=dt0/PK.dur;pkPose(Math.min(PK.t,1));
+ /* torso: se echa atrás al levantar y se inclina/gira al golpear */
+ if(PK.lean||PK.twist){_qb.setFromAxisAngle(_X,PK.lean*w);_qc.setFromAxisAngle(_Y,PK.twist*w);_qb.multiply(_qc);c.sp.quaternion.multiply(_qb);c.hd.quaternion.premultiply(_qc.identity().slerp(_qb,.6).conjugate())}
+ /* cada brazo hacia su palma (la derecha en el extremo del mango, la izquierda un poco más arriba) */
+ for(let i=0;i<2;i++){armPose(i,i?PK.Tl:PK.T,_qa,_qb);c.ua[i].quaternion.slerp(_qa,w);c.ea[i].quaternion.slerp(_qb,w)}
+ /* el pico: su origen (la mano derecha) en la palma y su mango apuntando a PK.h, expresado en el marco del antebrazo derecho */
+ pickQ(PK.h,_qa);_qb.copy(c.ua[0].quaternion).multiply(c.ea[0].quaternion).conjugate().multiply(_qa).multiply(QX12);
+ held.quaternion.slerp(_qb,w);held.position.lerp(_hp.set(0,-AL2,0),w);held.scale.setScalar(1);
+ PSt.tgW=w;PSt.tgT=PK.T.slice();PSt.tgL=PK.Tl.slice()/* objetivos de las palmas para el IK propio de las skins .glb (las manos reales llegan al mismo sitio) */}
+
+/* ---------- bucle (se ejecuta después de game2 y antes de skinUpdate) ---------- */
+function frame(){
+ const dt0=clamp(P.t-FB.lt,0,.05);FB.lt=P.t;const c=me,s=inv[sel];
+ if(FB.on&&Object.keys(FB.cl).length){
+  const tg=targets(s),a=1-Math.exp(-dt0*CFG.fade);let sum=0;
+  for(const k in FB.cl){let w=FB.w[k]||0;w+=((tg[k]||0)-w)*a;if(w<.003&&!tg[k])w=0;FB.w[k]=w;sum+=w}
+  if(sum>1)for(const k in FB.cl)FB.w[k]/=sum;
+  const act=[];let gW=0;for(const k in FB.cl)if(FB.w[k]>0){act.push(k);if(GROUND.includes(k))gW+=FB.w[k]}
+  if(act.length){
+   const v=PSt.v,arms=1-clamp(PSt.tgW||0,0,1);/* con un arma en las manos, torso/cabeza/brazos los lleva el IK del arma (no el FBX): así el arma conserva su orientación; las piernas y la cadera sí son del FBX */
+   for(const k of act){const S=FB.cl[k];S.act.timeScale=CFG.rate[k]?CFG.rate[k](v):1;S.mixer.update(dt0);sample(S)}
+   for(const id of IDS){const[key,i]=MAP[id],arm=id=='spine'||id=='head'||id[0]=='u'||id[0]=='e',acc=procQ(c,key,i,PW[id]);let se=0;
+    for(const k of act)if(FB.cl[k].out[id])se+=FB.w[k]*(arm?arms:1);
+    let cum=1-se;for(const k of act){const q=FB.cl[k].out[id];if(!q)continue;const w=FB.w[k]*(arm?arms:1);if(w<1e-4)continue;cum+=w;acc.slerp(q,w/cum)}}
+   toLocal(c);
+   if(gW>.01&&P.mode=='ground'&&c.dim){/* pies al suelo: la cadera baja o sube hasta que la suela más baja toque el suelo (como el agachado procedural) */
+    let low=1e9;for(let i=0;i<2;i++)low=Math.min(low,legFK(c,i).low);const y=CRP.contact-low;if(isFinite(y))c.hips.position.y=lerp(c.hips.position.y,y,clamp(gW,0,1))}}
+ }
+ if(!PK.dead)try{pickaxe(c,dt0,s)}catch(e){PK.dead=true;FB.wPk=0;console.error('[FBX] pico:',e)}}
+function run(){
+ if(FB.ran)return;FB.ran=true;
+ try{frame()}catch(e){console.error('[FBX]',e);if(++FB.err>3){FB.on=false;PK.dead=true;console.warn('[FBX] desactivado por errores: se usan las animaciones procedurales')}}}
+{const su=skinUpdate;skinUpdate=function(){run();return su.apply(this,arguments)}}
+{const g3=game3;game3=function(dt,dt0){FB.ran=false;g3(dt,dt0);run()}}/* sin skin .glb (Jonesy procedural) skinUpdate no se llama: se aplica aquí */
+{const f0=fire;fire=function(){const sw0=swing,r=f0.apply(this,arguments);try{if(swing>sw0+.01&&inv[sel]&&inv[sel].t=='p')PK.go()}catch(e){}return r}}/* clic izquierdo con el pico → swing */
+window.FBXANIM={cfg:CFG,state:FB,pick:PK,swing:()=>PK.go(),off:()=>{FB.on=false},on:()=>{FB.on=true},_t:{prepSource,sample,toLocal,PW,pkPose,pickQ,targets,armPose}};
+if(document.readyState=='complete')setTimeout(loadAll,50);else addEventListener('load',()=>setTimeout(loadAll,50));
 })();
 </script>
 </body></html>
