@@ -225,6 +225,16 @@ body :not(#ld1):not(#ld1 *):not(#ld2):not(#ld2 *):not(#nav):not(#nav *):not(#lk)
   #mp h2{font-size:28px!important}
 }
 </style>
+<style id="v11-png">
+/* ====== v11: PNG de armas, objetos y materiales ENCIMA de los SVG de siempre ======
+   Los SVG se conservan tal cual en el DOM: solo se ocultan (visibility, sin cambiar su tamaño ni su sitio) cuando su PNG ya está cargado.
+   Si un PNG falta o falla, no se dibuja y se sigue viendo el SVG de antes. */
+.sl img.pic{position:absolute;left:2px;top:7px;width:50px;height:34px;object-fit:contain;object-position:center;pointer-events:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 1px 1px #0008)}
+.sl.png-on svg{visibility:hidden}
+#bld .mb img.pic{position:absolute;left:4px;top:4px;width:46px;height:35px;object-fit:contain;object-position:center;pointer-events:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 1px 1px #0008)}
+#bld .mb.png-on svg{visibility:hidden}
+#bld .mb u{z-index:1}
+</style>
 
 </head><body>
 <!-- ====== v6: PANTALLA DE CARGA 1 · JUEGO (se muestra al abrir la página) ====== -->
@@ -444,6 +454,25 @@ let playing=false,lobby=true,paused=false,hp=100,sh=0,stam=100,exh=false,sprAct=
 const A={s:12,m:90,l:90,h:8},opt={reticle:1,health:1,minimap:1,quickbar:1,feed:1,compass:1,ammo:1,sprint:1},items=[],bots=[],npcs=[],chests=[],fx=[],held=new T.Group(),V=new T.Vector3(),rsel=()=>Math.min(4,Math.floor(rr()*rr()*5.5));rig.add(held);held.position.set(.38,1.3,.35);
 let AC;const snd=(f,d,ty='square',v=.1,sl)=>{try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain(),n=AC.currentTime;o.type=ty;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(sl,n+d);g.gain.setValueAtTime(Math.max(.001,v),n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(n+d)}catch(e){}};
 const IC={pump:'M2 24l14-8h8v-3l5-1h31v4H33l-3 3h-6l-3 8-6-3-5 5z',ar:'M2 22l11-5h9l3-4h7v4h28v4H34l-4 3v8h-6v-8H15l-5 5z',smg:'M6 20l9-5h17v-4h7v4h14v5H42l-2 11h-7l1-11H16l-5 4z',sn:'M2 23l16-5h20v-5h7v5h17v3H46l-3 4h-6l-1 5h-6l1-5H18l-6 4z',p:'M8 38L36 12l-3-5 11-3 7 7-8 9-4-3L12 40z',h:'M18 8h12v12h12v12H30v12H18V32H6V20h12z',s:'M20 4h10v9l9 14v15H11V27l9-14z',a:'M8 12h9l3 7v21H6V19zM23 12h9l3 7v21H21V19zM38 12h9l3 7v21H36V19z'},ico=k=>`<svg viewBox="0 0 64 44" fill="#fff"><path d="${IC[k]}"/></svg>`;
+/* ====== v11 · PNG de armas, objetos y materiales ======
+   Se colocan ENCIMA de los SVG de siempre (ico() y MI siguen intactos). Un PNG solo se usa cuando ya se ha cargado de verdad; si falta o falla se ve el SVG.
+   Los PNG van junto al index.html; si los metes en una carpeta, añádela a PNG_DIRS (se prueban en orden y se recuerda la que funcione). */
+const PNG_DIRS=['','img/','imagenes/','images/','assets/','png/'];
+const PNG_FILES={pump:'escopetadebombeo.png',ar:'SCAR Assault Rifle.png',smg:'subfusil.png',sn:'sniper.png',p:'defaultPICO.png',vendas:'Vendas.png',medkit:'Medkit.png',mini:'SmallShieldPotion.png',pot:'ShieldPotion.png',w:'MADERA.png',s:'LADRILLO.png',m:'HIERRO.png'};
+const PNGU={},PNGKEEP={};let pngT=0;/* PNGU[k]: null = buscando · '' = no existe · 'url' = cargado y listo */
+const pngOk=k=>!!(k&&PNGU[k]),
+ pngImg=k=>pngOk(k)?`<img class="pic" src="${PNGU[k]}" alt="" draggable="false">`:'',
+ icoKey=s=>s.t=='w'?s.k:s.t=='p'?'p':s.t=='h'?(s.nm=='Botiquín'?'medkit':'vendas'):s.t=='s'?(s.nm=='Mini poción'?'mini':'pot'):'';
+function pngRefresh(){clearTimeout(pngT);pngT=setTimeout(()=>{try{ui()}catch(e){}try{dispatchEvent(new Event('pngready'))}catch(e){}},30)}
+function pngLoad(k){
+ if(PNGU[k]!==undefined)return;PNGU[k]=null;let i=0;
+ const next=()=>{
+  if(i>=PNG_DIRS.length){PNGU[k]='';console.warn('[PNG] no se encontró «'+PNG_FILES[k]+'»: se sigue viendo el SVG');return}
+  const u=encodeURI(PNG_DIRS[i++]+PNG_FILES[k]),im=new Image();im.decoding='async';
+  im.onload=()=>{if(!im.naturalWidth)return next();PNGU[k]=u;PNGKEEP[k]=im;try{im.decode&&im.decode().catch(()=>{})}catch(e){}pngRefresh()};
+  im.onerror=next;im.src=u};
+ next()}
+Object.keys(PNG_FILES).forEach(pngLoad);
 const GM={pump:[['b',0x9a5a2a,0,-.04,-.4,.08,.15,.42],['b',0x6b7078,0,0,-.12,.1,.16,.34],['c',0x25282d,0,.05,.6,.032,1],['b',0x3a3d42,0,.088,.6,.03,.012,.9],['c',0x55585f,0,-.03,.45,.026,.7],['p',0xb5702e,0,-.035,.4,.05,.24],['b',0x2a2a2a,0,.1,1.05,.01,.04,.02]],ar:[['b',0x2d3036,0,0,-.05,.09,.17,.55],['b',0x3a3f46,0,-.02,-.5,.07,.16,.34],['b',0x1e2024,0,-.17,-.14,.06,.18,.08],['b',0x1a1c20,0,-.2,.1,.06,.24,.1],['b',0x5a6a48,0,0,.42,.1,.12,.4],['c',0x25282d,0,.02,.83,.022,.34],['b',0x3a3d42,0,.115,0,.05,.04,.55],['b',0x222222,0,.15,-.12,.05,.06,.07]],smg:[['b',0x2d3036,0,0,0,.09,.17,.4],['b',0x3a3f46,0,-.02,-.36,.05,.12,.28],['b',0x1a1c20,0,-.22,.05,.05,.28,.08],['c',0x25282d,0,.02,.4,.025,.3],['b',0x1e2024,0,-.15,-.12,.06,.16,.08]],sn:[['b',0x4a3a2a,0,-.02,-.3,.08,.16,.7],['b',0x3a3f46,0,0,.2,.08,.12,.4],['c',0x25282d,0,.02,.9,.022,.8],['c',0x1a1c20,0,.12,.1,.045,.4],['b',0x1a1c20,0,-.18,.12,.05,.2,.08]]};
 function gun(k,col){const g=new T.Group(),a=new T.Mesh(new T.BoxGeometry(.1,.02,.2),M(col));a.position.set(0,.095,0);g.add(a);for(const[t,c,x,y,z,p,q,r]of GM[k]){let m;if(t=='b')m=new T.Mesh(new T.BoxGeometry(p,q,r),M(c));else{m=new T.Mesh(new T.CylinderGeometry(p,p,q,10),M(c));m.rotation.x=1.5708}m.position.set(x,y,z);m.castShadow=true;g.add(m);if(t=='p')g.userData.pump=m}return g}
 function pick(){const g=new T.Group(),h=new T.Mesh(new T.CylinderGeometry(.03,.03,1,6),M(0x7a5232));h.position.y=.3;g.add(h);const hd=new T.Mesh(new T.BoxGeometry(.7,.08,.1),M(0xd33a2a));hd.position.y=.8;g.add(hd);g.rotation.x=1.2;return g}
@@ -512,7 +541,7 @@ if(best){const pt=o.clone().addScaledVector(d,bt),hd=pt.y>best.g.position.y+1.7?
 function take(o){const it=o.it;scene.remove(o.g);items.splice(items.indexOf(o),1);snd(800,.12,'sine',.08,1100);if(it.t=='a'){A[it.a]+=it.n;return}
 if(it.q){const j=inv.findIndex((v,i)=>i&&v&&v.nm==it.nm);if(j>0){inv[j].q++;return}}let i=inv.findIndex((v,j)=>j&&!v);if(i<0)i=sel||1;if(inv[i]&&inv[i].t!='p')drop(P.x+1.2,P.z,inv[i]);inv[i]=it;sel=i;holdUpdate()}
 function talk(n){$('talk').innerHTML='<b>'+n.name+'</b>: '+n.lines[n.li++%n.lines.length];$('talk').style.opacity=1;talkT=4;if(n.gift){drop(n.x+1.6,n.z+.5,n.gift);n.gift=null}}
-function ui(){let h='';inv.forEach((s,i)=>{const c=s?(s.t=='w'?RAR[s.r][1]:s.t=='p'?0x8a8f99:s.t=='s'?0x3a8bf0:0x58c13a):0,cs='#'+c.toString(16).padStart(6,'0'),ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class="sl${i==sel?' on':''}" style="--c:${s?cs+'bb':'#0000'}"><u>${i+1}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
+function ui(){let h='';inv.forEach((s,i)=>{const c=s?(s.t=='w'?RAR[s.r][1]:s.t=='p'?0x8a8f99:s.t=='s'?0x3a8bf0:0x58c13a):0,cs='#'+c.toString(16).padStart(6,'0'),ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class="sl${i==sel?' on':''}${s&&pngOk(icoKey(s))?' png-on':''}" style="--c:${s?cs+'bb':'#0000'}"><u>${i+1}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t)+pngImg(icoKey(s)):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
 const cmp=$('cmp'),CL={0:'N',45:'NE',90:'E',135:'SE',180:'S',225:'SO',270:'O',315:'NO'};
 {
  let h='<div class="cmp-strip">';
@@ -710,7 +739,7 @@ function noise(x,z,team){for(const b of bots){if(b.dead||b.team===team)continue;
 {const st=document.createElement('style');st.textContent=`.sl{width:62px;height:62px;border:3px solid #fff4;background:#0b1a4a99;box-shadow:inset 0 2px 0 #fff5,0 2px 6px #0007;transform:none;transition:transform .1s,box-shadow .1s}.sl.em{background:#0a143a88;border-color:#fff2}.sl.on{border-color:#fff!important;transform:translateY(-8px) scale(1.06);box-shadow:inset 0 2px 0 #fff8,0 0 14px 2px #fffc,0 6px 10px #0006;animation:pop .14s ease-out}@keyframes pop{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-8px) scale(1.06)}}.sl svg{filter:drop-shadow(0 1px 1px #0008)}#xh{opacity:0}#xh.h{opacity:1}#ret{position:fixed;left:50%;top:50%;width:240px;height:240px;margin:-120px 0 0 -120px;pointer-events:none;z-index:3}#scope{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .15s;z-index:2;background:radial-gradient(circle at 50% 50%,transparent 0,transparent 35.5vh,#000 36vh)}#scope:before,#scope:after{content:'';position:absolute;background:#000}#scope:before{left:50%;top:calc(50% - 36vh);width:2px;height:72vh}#scope:after{top:50%;left:calc(50% - 36vh);height:2px;width:72vh}#uw{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:2;background:radial-gradient(ellipse at 50% 30%,rgba(60,170,255,.25),rgba(10,70,160,.6))}`;document.head.appendChild(st);document.body.insertAdjacentHTML('beforeend','<div id=scope></div><div id=uw></div>');
 const rd0=document.createElement('div');rd0.id='ret';rd0.innerHTML='<svg width=240 height=240 viewBox="-120 -120 240 240"><g id=rl stroke=#fff stroke-width=2.4 fill=none><line/><line/><line/><line/></g><circle id=rc r=20 stroke=#fff stroke-width=2.4 fill=none /><circle id=rd r=1.8 fill=#fff /></svg>';$('hud').appendChild(rd0)}
 const RC=[['#d6dbe3','#8e98a6','#f2f4f8'],['#6fe04a','#2c9a18','#b4ff8e'],['#4cb0ff','#1c62d8','#a6d8ff'],['#cd6cff','#7a2bd2','#ecb8ff'],['#ffc24a','#e07a10','#fff0a8'],['#fff08a','#e0a812','#ffffff'],['#6af5e6','#16a8b8','#c8fff8']];
-function ui(){let h='';inv.forEach((s,i)=>{let r=-1;if(s)r=s.t=='w'?s.r:s.t=='p'?0:s.t=='s'?(s.n>=50?3:2):(s.n>=100?1:0);const c=RC[r],ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class='sl${i==sel?' on':''}${s?'':' em'}'${s?` style='background:linear-gradient(165deg,${c[0]},${c[1]});border-color:${c[2]}'`:''}><u>${i+1}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
+function ui(){let h='';inv.forEach((s,i)=>{let r=-1;if(s)r=s.t=='w'?s.r:s.t=='p'?0:s.t=='s'?(s.n>=50?3:2):(s.n>=100?1:0);const c=RC[r],ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class='sl${i==sel?' on':''}${s?'':' em'}${s&&pngOk(icoKey(s))?' png-on':''}'${s?` style='background:linear-gradient(165deg,${c[0]},${c[1]});border-color:${c[2]}'`:''}><u>${i+1}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t)+pngImg(icoKey(s)):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
 const rl=$('rl'),rc=$('rc'),rd=$('rd'),scp=$('scope');
 function retU(dt0){const s=inv[sel],w=s&&s.t=='w'?WP[s.k]:null,air=P.mode=='ground'&&P.y>H(P.x,P.z)+.25,tg=w?Math.max(0,PSt.v/14*.6+(sprAct?.4:0)+(air?.7:0)+(crouch?-.15:0)):0;spread+=(tg-spread)*Math.min(1,dt0*(spread>tg?5:14));
 const lines=[...rl.children];let ty='none';if(playing&&s)ty=s.t=='p'?'dot':w?s.k:'none';const focal=(innerHeight/2)/Math.tan(cam.fov*Math.PI/360),gap=w?Math.max(5,w.sp*(.4+spread)*(ads?(s.k=='sn'?0:.25):1)*focal):0,scope=ads&&w&&s.k=='sn'&&playing;scp.style.opacity=scope?1:0;
@@ -1798,7 +1827,7 @@ s:`<svg viewBox="0 0 64 44"><defs><linearGradient id="bf" x1="0" y1="0" x2="0" y
 m:`<svg viewBox="0 0 64 48"><defs><linearGradient id="me" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8eef5"/><stop offset="1" stop-color="#a7b3c1"/></linearGradient><linearGradient id="mt" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#cfd8e2"/><stop offset="1" stop-color="#f4f7fb"/></linearGradient></defs><path d="M21 27v12l22-14V13z" fill="#8691a0"/><path d="M21 39h9l22-14h-9z" fill="#b6c0cc"/><path d="M30 39v5l22-14v-5z" fill="#7b8695"/><path d="M30 22v5l22-14V8z" fill="#97a2b0"/><path d="M6 22h24l22-14H28z" fill="url(#mt)"/><path d="M6 22h24l22-14" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width=".8"/><path d="M6 22h24v5H21v12h9v5H6v-5h9V27H6z" fill="url(#me)" stroke="#5f6b79" stroke-width=".9" stroke-linejoin="round"/><path d="M7 23h22" stroke="#fff" stroke-opacity=".8" stroke-width=".8"/><circle cx="18" cy="33" r="1.5" fill="#5f6b79"/><circle cx="18" cy="33" r=".7" fill="#2f3945"/></svg>`};
 const bld=document.createElement('div');bld.id='bld';document.body.appendChild(bld);
 function bUi(){bld.style.display=B.v?'flex':'none';
- bld.innerHTML='<div class="mr">'+['w','s','m'].map((m,i)=>`<div class="mb${B.mat==m?' on':''}"><u>${'ZXC'[i]}</u>${MI[m]}<s>${MAT[m]}</s></div>`).join('')+'</div>'+(B.on?'<div class="pr"><div class="pc" style="width:18px;opacity:1;filter:none"><u style="left:0;bottom:auto;top:14px;transform:none;margin:0;width:16px;height:16px;font:700 10px/14px Arial">G</u></div><div class="pc" style="width:26px;opacity:1;filter:none"><u style="left:2px;bottom:auto;top:10px;transform:none;margin:0">Q</u></div>'+[['wall',1],['floor',2],['ramp',3]].map(([t,k])=>`<div class="pc${B.type==t?' on':''}"><u>${k}</u><svg viewBox="0 0 36 36">${ICO[t]}</svg></div>`).join('')+'</div>':'')}
+ bld.innerHTML='<div class="mr">'+['w','s','m'].map((m,i)=>`<div class="mb${B.mat==m?' on':''}${pngOk(m)?' png-on':''}"><u>${'ZXC'[i]}</u>${MI[m]}${pngImg(m)}<s>${MAT[m]}</s></div>`).join('')+'</div>'+(B.on?'<div class="pr"><div class="pc" style="width:18px;opacity:1;filter:none"><u style="left:0;bottom:auto;top:14px;transform:none;margin:0;width:16px;height:16px;font:700 10px/14px Arial">G</u></div><div class="pc" style="width:26px;opacity:1;filter:none"><u style="left:2px;bottom:auto;top:10px;transform:none;margin:0">Q</u></div>'+[['wall',1],['floor',2],['ramp',3]].map(([t,k])=>`<div class="pc${B.type==t?' on':''}"><u>${k}</u><svg viewBox="0 0 36 36">${ICO[t]}</svg></div>`).join('')+'</div>':'')}
 /* ---------- entrada (captura: tiene prioridad sobre el resto del juego solo en modo construcción/edición) ---------- */
 const act=()=>playing&&!lobby&&!paused&&P.mode=='ground';
 function gKey(q){if(B.ed){endEdit(!q);return}if(B.on){B.on=false;for(const k in PV)PV[k].visible=false;bUi();return}
@@ -1840,6 +1869,7 @@ function bUpd(dt){const a=playing&&!lobby&&!paused;if(B.v!==a){B.v=a;bUi()}
  if(!a)return;wallPush();if(B.on&&P.mode=='ground')preview();if(B.ed){if(P.mode=='ground'&&slide<=0)crouch=true;editHover()}}
 const g3=game3;game3=function(dt,dt0){g3(dt,dt0);try{bUpd(dt0)}catch(e){console.error('[v7-build]',e)}};
 window.BUILD={B,MAT,pcs,nodes,place,hit,stab,spec,valid,startEdit,endEdit,res,snap,D,cpos};bUi();
+addEventListener('pngready',()=>{try{bUi()}catch(e){}});/* v11: cuando un PNG termina de cargar se repinta el panel de materiales */
 })();
 </script>
 <style id="v8-css">
@@ -2035,6 +2065,51 @@ const imgQ=[];let imgBusy=0;
 function applyImg(sk,u){const c=LK.cc[sk.id];if(!c||!u)return;const im=c.querySelector('img');if(im.getAttribute('src')!==u){im.onload=()=>c.classList.add('has');im.src=u}else if(im.complete&&im.naturalWidth)c.classList.add('has')}
 function imgPump(){while(imgBusy<4&&imgQ.length){const sk=imgQ.shift();imgBusy++;findImg(sk).then(u=>{sk.__q=0;applyImg(sk,u)},()=>{sk.__q=0}).then(()=>{imgBusy--;imgPump()})}}
 function queueImg(sk){if(sk.__img!==undefined){applyImg(sk,sk.__img);return}if(sk.__q)return;sk.__q=1;imgQ.push(sk);imgPump()}
+
+/* ---------- v11 · PRECARGA de los retratos de las skins durante la pantalla de carga ----------
+   Arranca nada más abrir la página (la pantalla de carga #ld1 ya está a la vista), así que aprovecha la espera de «PRESS TO START» y la barra de 10 s.
+   NO bloquea nada: ni la barra ni endGameLoading() esperan por ella. Todo es asíncrono (Image + decode()), con descargas en paralelo y prioridad alta.
+   · Solo se piden retratos de skins que existen (.glb encontrado), empezando por la skin equipada.
+   · Caché: cada URL se pide UNA sola vez (mapa en memoria + caché HTTP del navegador). Lo hallado se guarda en sk.__img (el campo que ya usa la taquilla, que
+     por tanto no vuelve a buscarlo) y en localStorage: la siguiente visita va directa al retrato correcto sin probar extensiones que no existen.
+   · Errores: un fallo nunca corta la cola ni lanza excepciones; la skin sin retrato queda como antes (la taquilla enseña sus iniciales).
+   · Si un retrato tarda más de 10 s, se libera su hueco en la cola y sigue cargando en segundo plano (la taquilla lo recoge cuando llegue).
+   · Mientras jonesy.glb aún se está descargando solo hay 2 descargas a la vez, para no retrasar el arranque del juego. */
+const SPRE={keep:new Map(),mem:{},slow:[],none:[],ok:0,on:false,KEY:'athena_skin_img_v1'};
+try{SPRE.mem=JSON.parse(localStorage.getItem(SPRE.KEY)||'{}')||{}}catch(e){}
+const spreSave=()=>{try{localStorage.setItem(SPRE.KEY,JSON.stringify(SPRE.mem))}catch(e){}};
+function warmImg(u){/* una sola petición por URL; la imagen queda descodificada y retenida en memoria */
+ let e=SPRE.keep.get(u);if(e)return e.p;
+ const im=new Image();im.decoding='async';try{im.fetchPriority='high'}catch(_){}
+ e={im,p:new Promise(res=>{im.onload=()=>{const d=()=>res(!!im.naturalWidth);im.decode?im.decode().then(d,d):d()};im.onerror=()=>res(false);im.src=u}).then(ok=>{if(!ok)SPRE.keep.delete(u);return ok})};
+ SPRE.keep.set(u,e);return e.p}
+function preSkin(sk){/* mismo contrato que findImg(): resuelve con la URL del retrato o '' */
+ if(sk.__img!==undefined)return Promise.resolve(sk.__img);/* ya resuelto (caché) */
+ if(sk.__imgP)return sk.__imgP;/* ya en curso (p. ej. la taquilla) */
+ const m=SPRE.mem[sk.id],list=m?[m]:[];
+ baseNames(sk).forEach(n=>EXT.forEach(x=>{const u=SKIN_DIR+n+'.'+x;if(u!==m)list.push(u)}));
+ return sk.__imgP=(async()=>{for(const u of list)if(await warmImg(u))return u;return ''})().then(u=>{
+  sk.__img=u;sk.__imgP=null;
+  if(u){SPRE.ok++;if(SPRE.mem[sk.id]!==u){SPRE.mem[sk.id]=u;spreSave()}}
+  else{SPRE.none.push(sk.name);if(SPRE.mem[sk.id]){delete SPRE.mem[sk.id];spreSave()}}
+  return u},()=>{sk.__imgP=null;return ''})}
+function skinPreload(){
+ if(SPRE.on)return;SPRE.on=true;const t0=performance.now();
+ /* espera (máx. 2,5 s) a que skinScan() sepa qué .glb existen, para no pedir retratos de skins que no están */
+ new Promise(r=>{const t=Date.now(),w=()=>!SK.scan||Date.now()-t>2500?r():setTimeout(w,60);w()}).then(()=>{
+  const q=SKINS.filter(k=>k.found!==false).sort((a,b)=>(b.id===SK.eq)-(a.id===SK.eq)||(b.found===true)-(a.found===true));
+  if(!q.length)return;
+  let i=0;
+  const lim=(p,sk)=>new Promise(r=>{const t=setTimeout(()=>{SPRE.slow.push(sk.name);r()},10000),f=()=>{clearTimeout(t);r()};p.then(f,f)});
+  const worker=async()=>{while(i<q.length){const sk=q[i++];try{await lim(preSkin(sk),sk)}catch(e){}}};
+  const ws=Array.from({length:Math.min(2,q.length)},worker);
+  Promise.race([window.__skinReady||Promise.resolve(),new Promise(r=>setTimeout(r,10000))])
+   .then(()=>{if(i<q.length)for(let k=0;k<2;k++)ws.push(worker())})
+   .then(()=>Promise.all(ws)).then(()=>{
+    console.info('[skins] precarga de retratos: '+SPRE.ok+'/'+q.length+' en '+Math.round(performance.now()-t0)+' ms'
+     +(SPRE.none.length?' · sin retrato: '+SPRE.none.join(', '):'')+(SPRE.slow.length?' · lentos (terminan en segundo plano): '+SPRE.slow.join(', '):''))})
+ }).catch(e=>console.warn('[skins] precarga de retratos',e))}
+try{skinPreload()}catch(e){console.warn('[skins] precarga de retratos',e)}
 
 /* ---------- tarjetas ---------- */
 function mkCard(sk){
