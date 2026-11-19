@@ -2229,14 +2229,11 @@ addEventListener('resize',()=>{if(LK.open)requestAnimationFrame(lkSb)});
 </script>
 <script id="v9-fbx">
 /* ====== v9 · ANIMACIONES FBX (carpeta animaciones/) + PICO POR CÓDIGO ======
-   1) Carga con THREE.FBXLoader los 7 archivos de animaciones/ :
-        RifleWalk.fbx          → caminar (normal, con o sin arma)
+   1) Carga con THREE.FBXLoader los 4 archivos de animaciones/ (el resto de movimientos usa las animaciones procedurales de siempre):
         Rifle Run.fbx          → esprintar con un arma (rifle) en la barra
-        Run.fbx                → esprintar sin arma / con pico / con objetos
         RifleAgachado.fbx      → quieto agachado
         AndarAgachadoRifle.fbx → andar agachado
         Treading Water.fbx     → flotar quieto en el agua
-        Swim.fbx               → nadar avanzando
       En vez de SkeletonUtils.retargetClip (que exigiría que cada skin .glb tuviera huesos con los mismos nombres y el mismo reposo), cada FBX se
       mueve en un esqueleto oculto, se lleva a la misma pose de reposo que usan las skins (brazos y piernas rectos, misma orientación) y su pose
       se traduce al esqueleto procedural del juego (cadera, columna, cabeza, brazos, antebrazos, muslos, rodillas y pies). Ese esqueleto es el que
@@ -2254,22 +2251,22 @@ const CFG={
  dir:'animaciones/',/* carpeta de los .fbx, junto al index.html */
  dirs:['animaciones/','Animaciones/','animations/','Animations/',''],/* carpetas alternativas que se prueban si la primera da 404 (GitHub Pages distingue mayúsculas) */
  files:{/* clave → nombres posibles del archivo (el primero es el oficial; los demás por si el servidor distingue mayúsculas o espacios) */
-  walk:['RifleWalk.fbx'],
   rrun:['Rifle Run.fbx','RifleRun.fbx','Rifle_Run.fbx'],
-  run:['Run.fbx'],
   cidle:['RifleAgachado.fbx'],
   cwalk:['AndarAgachadoRifle.fbx'],
-  tread:['Treading Water.fbx','TreadingWater.fbx','Treading_Water.fbx'],
-  swim:['Swim.fbx']},
- fade:12,/* velocidad de la mezcla FBX ↔ procedural (1/s; más alto = cambio más rápido) */
+  tread:['Treading Water.fbx','TreadingWater.fbx','Treading_Water.fbx']},
+ fade:9,/* velocidad de la mezcla FBX ↔ procedural (1/s; más alto = cambio más rápido) */
  /* velocidad de reproducción de cada FBX según la velocidad real del jugador (m/s). Si los pasos se ven demasiado rápidos o lentos, cambia aquí */
- rate:{walk:v=>clamp(.35+v/6.5,.6,1.5),rrun:v=>clamp(v/9,.8,1.5),run:v=>clamp(v/9,.8,1.5),cwalk:v=>clamp(v/1.8,.5,1.8),cidle:()=>1,tread:()=>1,swim:v=>clamp(.6+v/6,.9,1.8)},
+ rate:{rrun:v=>clamp(v/9,.85,1.4),cwalk:v=>clamp(v/1.8,.6,1.6),cidle:()=>1,tread:()=>1},
+ vsmooth:6,/* suavizado de la velocidad que usan los pesos y la velocidad de reproducción (1/s; más bajo = más suave, evita el temblor) */
+ hipsSmooth:22,/* suavizado de la altura de la cadera al apoyar los pies en el suelo (1/s) */
+ armsOnlyWithWeapon:true,/* los FBX de rifle solo mueven brazos/torso/cabeza si llevas un arma en la barra (o nadas); si no, solo cadera y piernas */
  pick:{dur:.35,fade:12,grip:.27}/* duración del golpe (s), velocidad de entrada/salida de la guardia y separación de las manos en el mango (m) */
 };
 const IDS=['hips','spine','head','ua0','ua1','ea0','ea1','th0','th1','kn0','kn1','ft0','ft1'];
 const MAP={hips:['hips',0],spine:['spine',0],head:['head',0],ua0:['ua',0],ua1:['ua',1],ea0:['ea',0],ea1:['ea',1],th0:['th',0],th1:['th',1],kn0:['kn',0],kn1:['kn',1],ft0:['ft',0],ft1:['ft',1]};
-const GROUND=['walk','rrun','run','cidle','cwalk'];
-const FB={cl:{},w:{},fail:[],on:true,err:0,lt:0,ran:false,wPk:0,loaded:0,total:Object.keys(CFG.files).length};
+const GROUND=['rrun','cidle','cwalk'];
+const FB={cl:{},w:{},fail:[],on:true,err:0,lt:0,ran:false,wPk:0,air:0,sv:0,am:0,hy:null,loaded:0,total:Object.keys(CFG.files).length};
 const PW={};for(const id of IDS)PW[id]=new T.Quaternion();
 const _qa=new T.Quaternion(),_qb=new T.Quaternion(),_qc=new T.Quaternion();
 const bld=()=>{const b=window.BUILD&&window.BUILD.B;return!!(b&&(b.on||b.ed))};
@@ -2332,16 +2329,15 @@ function loadAll(){
 
 /* ---------- estados y pesos ---------- */
 function targets(s){
- const t={walk:0,rrun:0,run:0,cidle:0,cwalk:0,tread:0,swim:0},mode=P.mode;
+ const t={rrun:0,cidle:0,cwalk:0,tread:0},mode=P.mode;
  let ok=FB.on&&playing&&!lobby&&!paused&&!em&&(mode=='ground'||mode=='swim')&&!bld();
- if(ok){if(mode=='ground'){if(P.y>H(P.x,P.z)+.25||slide>0||(PSt.land||0)>0||(PSt.sw||0)>.003)ok=false}else if(FJ.on)ok=false}
+ if(ok){if(mode=='ground'){if(FB.air>.15||slide>0||(PSt.land||0)>0||(PSt.sw||0)>.003)ok=false}else if(FJ.on)ok=false}/* FB.air: solo cuenta como "en el aire" tras 0,15 s seguidos (los baches del terreno ya no cortan la animación) */
  if(ok&&Math.max(PSt.wa||0,PSt.wh||0)>.02)ok=false;/* apuntar / disparar: manda la animación de apuntar de siempre */
  if(!ok)return t;
- const v=PSt.v;
- if(mode=='swim'){const k=sm(v,.5,2.2);t.tread=1-k;t.swim=k;return t}
- const cw=PSt.cw||0,st=1-cw,km=sm(v,.25,1.4),mv=sm(v,.25,1.2),sp=sprAct?sm(v,6,10):0;
- const rk=((s&&s.t=='w')?['rrun','run','walk']:['run','rrun','walk']).find(k=>FB.cl[k])||'walk';
- t[rk]+=st*sp;t.walk+=st*mv*(1-sp);t.cidle=cw*(1-km);t.cwalk=cw*km;
+ const v=FB.sv;
+ if(mode=='swim'){t.tread=1-sm(v,.5,2.2);return t}/* nadando avanzando manda la animación procedural */
+ const cw=PSt.cw||0,st=1-cw,km=sm(v,.25,1.4),sp=(sprAct&&s&&s.t=='w')?sm(v,6,10):0;
+ t.rrun=st*sp;t.cidle=cw*(1-km);t.cwalk=cw*km;/* esprintar solo con arma; de pie andando/quieto = procedural */
  return t}
 
 /* ---------- 2 · PICO ---------- */
@@ -2393,20 +2389,23 @@ function pickaxe(c,dt0,s){
 /* ---------- bucle (se ejecuta después de game2 y antes de skinUpdate) ---------- */
 function frame(){
  const dt0=clamp(P.t-FB.lt,0,.05);FB.lt=P.t;const c=me,s=inv[sel];
+ FB.air=(P.mode=='ground'&&P.y>H(P.x,P.z)+.25)?FB.air+dt0:0;
+ FB.sv+=(PSt.v-FB.sv)*(1-Math.exp(-dt0*CFG.vsmooth));/* velocidad suavizada: PSt.v es ruidosa y hacía temblar pesos y ritmo */
  if(FB.on&&Object.keys(FB.cl).length){
   const tg=targets(s),a=1-Math.exp(-dt0*CFG.fade);let sum=0;
   for(const k in FB.cl){let w=FB.w[k]||0;w+=((tg[k]||0)-w)*a;if(w<.003&&!tg[k])w=0;FB.w[k]=w;sum+=w}
   if(sum>1)for(const k in FB.cl)FB.w[k]/=sum;
   const act=[];let gW=0;for(const k in FB.cl)if(FB.w[k]>0){act.push(k);if(GROUND.includes(k))gW+=FB.w[k]}
+  if(!act.length)FB.hy=null;
   if(act.length){
-   const v=PSt.v,arms=1-clamp(PSt.tgW||0,0,1);/* con un arma en las manos, torso/cabeza/brazos los lleva el IK del arma (no el FBX): así el arma conserva su orientación; las piernas y la cadera sí son del FBX */
+   const v=FB.sv,wantArms=(!CFG.armsOnlyWithWeapon||(s&&s.t=='w')||P.mode=='swim')?1:0;FB.am+=(wantArms-FB.am)*(1-Math.exp(-dt0*10));const arms=FB.am*(1-clamp(PSt.tgW||0,0,1));/* con un arma en las manos, torso/cabeza/brazos los lleva el IK del arma (no el FBX): así el arma conserva su orientación; las piernas y la cadera sí son del FBX */
    for(const k of act){const S=FB.cl[k];S.act.timeScale=CFG.rate[k]?CFG.rate[k](v):1;S.mixer.update(dt0);sample(S)}
    for(const id of IDS){const[key,i]=MAP[id],arm=id=='spine'||id=='head'||id[0]=='u'||id[0]=='e',acc=procQ(c,key,i,PW[id]);let se=0;
     for(const k of act)if(FB.cl[k].out[id])se+=FB.w[k]*(arm?arms:1);
     let cum=1-se;for(const k of act){const q=FB.cl[k].out[id];if(!q)continue;const w=FB.w[k]*(arm?arms:1);if(w<1e-4)continue;cum+=w;acc.slerp(q,w/cum)}}
    toLocal(c);
    if(gW>.01&&P.mode=='ground'&&c.dim){/* pies al suelo: la cadera baja o sube hasta que la suela más baja toque el suelo (como el agachado procedural) */
-    let low=1e9;for(let i=0;i<2;i++)low=Math.min(low,legFK(c,i).low);const y=CRP.contact-low;if(isFinite(y))c.hips.position.y=lerp(c.hips.position.y,y,clamp(gW,0,1))}}
+    let low=1e9;for(let i=0;i<2;i++)low=Math.min(low,legFK(c,i).low);const y=CRP.contact-low;if(isFinite(y)){FB.hy=FB.hy==null?y:FB.hy+(y-FB.hy)*(1-Math.exp(-dt0*CFG.hipsSmooth));c.hips.position.y=lerp(c.hips.position.y,FB.hy,clamp(gW,0,1))}}else FB.hy=null}
  }
  if(!PK.dead)try{pickaxe(c,dt0,s)}catch(e){PK.dead=true;FB.wPk=0;console.error('[FBX] pico:',e)}}
 function run(){
