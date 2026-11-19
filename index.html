@@ -87,6 +87,10 @@ body.no-reticle #xh,body.no-health #hp .br,body.no-sprint #sb,body.no-minimap #m
 @keyframes ld1TiltC{0%,100%{transform:translate(-50%,-50%) rotate(-4deg) scale(.98)}50%{transform:translate(-50%,-50%) rotate(4deg) scale(1.02)}}
 
 #ld1 #testo{margin-top:25vh;text-align:center;white-space:nowrap;z-index:3}
+/* v10: logo.png de la pantalla de inicio (alto fijo respecto a la ventana, sin deformarse, con un balanceo suave) */
+#ld1 #ld1Logo{display:block;margin:0 auto;height:26vh;width:auto;max-width:82vw;object-fit:contain;pointer-events:none;filter:drop-shadow(0 10px 18px rgba(0,0,0,.5));animation:ld1LogoFloat 6s ease-in-out infinite}
+@keyframes ld1LogoFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.025)}}
+@media(prefers-reduced-motion:reduce){#ld1 #ld1Logo{animation:none}}
 #ld1 h1{color:#fff;position:relative;font-family:'Luckiest Guy','Impact',sans-serif;font-size:110px;font-weight:400;font-style:normal;display:inline-block;letter-spacing:-2px;text-shadow:0 10px 20px rgba(0,0,0,.5),0 0 12px rgba(255,255,255,.45);transform-origin:bottom center;margin:0;padding:0}
 #ld1 .move1{animation:ld1Move1 6s ease-in-out infinite}
 #ld1 .move2{animation:ld1Move2 6s ease-in-out infinite}
@@ -240,7 +244,9 @@ body :not(#ld1):not(#ld1 *):not(#ld2):not(#ld2 *):not(#nav):not(#nav *):not(#lk)
         </div>
     </div>
     <div id="testo">
-        <h1 class="move1">F</h1><h1 class="move2">O</h1><h1 class="move1">R</h1><h1 class="move2">T</h1><h1 class="move1">N</h1><h1 class="move2">I</h1><h1 class="move1">T</h1><h1 class="move2">E</h1>
+        <!-- v10: logo.png (junto al index.html) en lugar del texto FORTNITE. Si el archivo no existe, se muestra el texto de antes -->
+        <img id="ld1Logo" src="logo.png" alt="Fortnite" draggable="false" onerror="this.style.display='none';document.getElementById('ld1Txt').style.display='block'">
+        <div id="ld1Txt" style="display:none"><h1 class="move1">F</h1><h1 class="move2">O</h1><h1 class="move1">R</h1><h1 class="move2">T</h1><h1 class="move1">N</h1><h1 class="move2">I</h1><h1 class="move1">T</h1><h1 class="move2">E</h1></div>
     </div>
     <div class="bottom-container">
         <button class="fn-button" id="ld1Btn" type="button">
