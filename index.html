@@ -541,7 +541,7 @@ if(best){const pt=o.clone().addScaledVector(d,bt),hd=pt.y>best.g.position.y+1.7?
 function take(o){const it=o.it;scene.remove(o.g);items.splice(items.indexOf(o),1);snd(800,.12,'sine',.08,1100);if(it.t=='a'){A[it.a]+=it.n;return}
 if(it.q){const j=inv.findIndex((v,i)=>i&&v&&v.nm==it.nm);if(j>0){inv[j].q++;return}}let i=inv.findIndex((v,j)=>j&&!v);if(i<0)i=sel||1;if(inv[i]&&inv[i].t!='p')drop(P.x+1.2,P.z,inv[i]);inv[i]=it;sel=i;holdUpdate()}
 function talk(n){$('talk').innerHTML='<b>'+n.name+'</b>: '+n.lines[n.li++%n.lines.length];$('talk').style.opacity=1;talkT=4;if(n.gift){drop(n.x+1.6,n.z+.5,n.gift);n.gift=null}}
-function ui(){let h='';inv.forEach((s,i)=>{const c=s?(s.t=='w'?RAR[s.r][1]:s.t=='p'?0x8a8f99:s.t=='s'?0x3a8bf0:0x58c13a):0,cs='#'+c.toString(16).padStart(6,'0'),ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class="sl${i==sel?' on':''}${s&&pngOk(icoKey(s))?' png-on':''}" style="--c:${s?cs+'bb':'#0000'}"><u>${i?i:'F'}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t)+pngImg(icoKey(s)):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
+function ui(){let h='';inv.forEach((s,i)=>{const c=s?(s.t=='w'?RAR[s.r][1]:s.t=='p'?0x8a8f99:s.t=='s'?0x3a8bf0:0x58c13a):0,cs='#'+c.toString(16).padStart(6,'0'),ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class="sl${i==sel?' on':''}${s&&pngOk(icoKey(s))?' png-on':''}" style="--c:${s?cs+'bb':'#0000'}"><u>${i+1}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t)+pngImg(icoKey(s)):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
 const cmp=$('cmp'),CL={0:'N',45:'NE',90:'E',135:'SE',180:'S',225:'SO',270:'O',315:'NO'};
 {
  let h='<div class="cmp-strip">';
@@ -555,7 +555,7 @@ const cmp=$('cmp'),CL={0:'N',45:'NE',90:'E',135:'SE',180:'S',225:'SO',270:'O',31
 }
 const cis=[...cmp.querySelectorAll('.cmp-tick,.cmp-mark')];
 const compassDir=d=>{const names=['N','NE','E','SE','S','SO','O','NO'];return names[Math.round((((d%360)+360)%360)/45)%8]};
-addEventListener('keydown',e=>{if(e.code=='Space'&&playing){if(P.mode=='bus')jump();else if(P.mode=='fall')P.mode='glide';else if(P.mode=='swim')fishJump()}if(!playing)return;if(e.code=='KeyE')useE=1;if(e.code=='KeyR')reload();const n=e.code.startsWith('Digit')?+e.code[5]:0;if(e.code=='KeyF'){if(!e.repeat){sel=0;holdUpdate();ui()}}else if(n>=1&&n<=5){sel=n;holdUpdate();ui()}});
+addEventListener('keydown',e=>{if(e.code=='Space'&&playing){if(P.mode=='bus')jump();else if(P.mode=='fall')P.mode='glide';else if(P.mode=='swim')fishJump()}if(!playing)return;if(e.code=='KeyE')useE=1;if(e.code=='KeyR')reload();const n=e.code.startsWith('Digit')?+e.code[5]:0;if(n>=1&&n<=6){sel=n-1;holdUpdate();ui()}});
 addEventListener('mousedown',e=>{if(e.button==0)mdown=true});addEventListener('mouseup',()=>mdown=false);
 cv.onclick=()=>{if(playing)try{Promise.resolve(cv.requestPointerLock()).catch(()=>{})}catch(e){}};let hadLock=false;document.addEventListener('pointerlockchange',()=>{const on=document.pointerLockElement==cv;if(!on&&hadLock&&playing&&!paused){paused=true;playing=false;$('pz').style.display='flex'}hadLock=on});
 document.addEventListener('pointerlockerror',()=>{if(playing)toast('Ratón no capturado: mantén el botón izquierdo y arrastra para mirar (Esc = pausa)')});
@@ -739,7 +739,7 @@ function noise(x,z,team){for(const b of bots){if(b.dead||b.team===team)continue;
 {const st=document.createElement('style');st.textContent=`.sl{width:62px;height:62px;border:3px solid #fff4;background:#0b1a4a99;box-shadow:inset 0 2px 0 #fff5,0 2px 6px #0007;transform:none;transition:transform .1s,box-shadow .1s}.sl.em{background:#0a143a88;border-color:#fff2}.sl.on{border-color:#fff!important;transform:translateY(-8px) scale(1.06);box-shadow:inset 0 2px 0 #fff8,0 0 14px 2px #fffc,0 6px 10px #0006;animation:pop .14s ease-out}@keyframes pop{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-8px) scale(1.06)}}.sl svg{filter:drop-shadow(0 1px 1px #0008)}#xh{opacity:0}#xh.h{opacity:1}#ret{position:fixed;left:50%;top:50%;width:240px;height:240px;margin:-120px 0 0 -120px;pointer-events:none;z-index:3}#scope{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .15s;z-index:2;background:radial-gradient(circle at 50% 50%,transparent 0,transparent 35.5vh,#000 36vh)}#scope:before,#scope:after{content:'';position:absolute;background:#000}#scope:before{left:50%;top:calc(50% - 36vh);width:2px;height:72vh}#scope:after{top:50%;left:calc(50% - 36vh);height:2px;width:72vh}#uw{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:2;background:radial-gradient(ellipse at 50% 30%,rgba(60,170,255,.25),rgba(10,70,160,.6))}`;document.head.appendChild(st);document.body.insertAdjacentHTML('beforeend','<div id=scope></div><div id=uw></div>');
 const rd0=document.createElement('div');rd0.id='ret';rd0.innerHTML='<svg width=240 height=240 viewBox="-120 -120 240 240"><g id=rl stroke=#fff stroke-width=2.4 fill=none><line/><line/><line/><line/></g><circle id=rc r=20 stroke=#fff stroke-width=2.4 fill=none /><circle id=rd r=1.8 fill=#fff /></svg>';$('hud').appendChild(rd0)}
 const RC=[['#d6dbe3','#8e98a6','#f2f4f8'],['#6fe04a','#2c9a18','#b4ff8e'],['#4cb0ff','#1c62d8','#a6d8ff'],['#cd6cff','#7a2bd2','#ecb8ff'],['#ffc24a','#e07a10','#fff0a8'],['#fff08a','#e0a812','#ffffff'],['#6af5e6','#16a8b8','#c8fff8']];
-function ui(){let h='';inv.forEach((s,i)=>{let r=-1;if(s)r=s.t=='w'?s.r:s.t=='p'?0:s.t=='s'?(s.n>=50?3:2):(s.n>=100?1:0);const c=RC[r],ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class='sl${i==sel?' on':''}${s?'':' em'}${s&&pngOk(icoKey(s))?' png-on':''}'${s?` style='background:linear-gradient(165deg,${c[0]},${c[1]});border-color:${c[2]}'`:''}><u>${i?i:'F'}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t)+pngImg(icoKey(s)):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
+function ui(){let h='';inv.forEach((s,i)=>{let r=-1;if(s)r=s.t=='w'?s.r:s.t=='p'?0:s.t=='s'?(s.n>=50?3:2):(s.n>=100?1:0);const c=RC[r],ct=!s?'':s.t=='w'?A[WP[s.k].am]:s.q>1?s.q:'';h+=`<div class='sl${i==sel?' on':''}${s?'':' em'}${s&&pngOk(icoKey(s))?' png-on':''}'${s?` style='background:linear-gradient(165deg,${c[0]},${c[1]});border-color:${c[2]}'`:''}><u>${i+1}</u>${s?ico(s.t=='w'?s.k:s.t=='p'?'p':s.t)+pngImg(icoKey(s)):''}<b>${ct}</b></div>`});{const hot=$('hot');if(hot._h!==h||!hot.firstChild){hot.innerHTML=h;hot._h=h}}const s=inv[sel];$('wi').innerHTML=!s?'':s.t=='w'?`<b>${s.mag}</b> / ${A[WP[s.k].am]}<small>${WP[s.k].n}${rlT>0?' · recargando':''}</small>`:`<small>${s.t=='p'?'Pico':s.nm}</small>`}
 const rl=$('rl'),rc=$('rc'),rd=$('rd'),scp=$('scope');
 function retU(dt0){const s=inv[sel],w=s&&s.t=='w'?WP[s.k]:null,air=P.mode=='ground'&&P.y>H(P.x,P.z)+.25,tg=w?Math.max(0,PSt.v/14*.6+(sprAct?.4:0)+(air?.7:0)+(crouch?-.15:0)):0;spread+=(tg-spread)*Math.min(1,dt0*(spread>tg?5:14));
 const lines=[...rl.children];let ty='none';if(playing&&s)ty=s.t=='p'?'dot':w?s.k:'none';const focal=(innerHeight/2)/Math.tan(cam.fov*Math.PI/360),gap=w?Math.max(5,w.sp*(.4+spread)*(ads?(s.k=='sn'?0:.25):1)*focal):0,scope=ads&&w&&s.k=='sn'&&playing;scp.style.opacity=scope?1:0;
@@ -1415,7 +1415,7 @@ function driveArms(S,c){const a=_sq[0],p=_sq[1],wA=(PSt.tgW>.01&&PSt.tgT&&PSt.tg
 function holdWeapon(S,c){if(S.hd){if(held.position.distanceToSquared(S.hd.after)<1e-12)held.position.sub(S.hd.d);S.hd=null}
  if(!S.hand||!held.visible||held.parent!==c.ea[0])return;
  S.holder.updateMatrix();const pg=_sv[0].copy(S.gripL).applyMatrix4(relM(S.hand,S.holder)).applyMatrix4(S.holder.matrix),pl=pg.applyMatrix4(relM(c.ea[0],c.g).invert()),
- d=new T.Vector3(pl.x,pl.y+(PSt.tgW>.01||PSt.cr?AL2:.3),pl.z);if(!(d.length()<.6))return;held.position.add(d);S.hd={d,after:held.position.clone()}}
+ d=new T.Vector3(pl.x,pl.y+(PSt.tgW>.01?AL2:.3),pl.z);if(!(d.length()<.6))return;held.position.add(d);S.hd={d,after:held.position.clone()}}
 
 /* ---------- montaje del modelo sobre un personaje procedural (jugador o NPC Jonesy) ---------- */
 const Y_UP=new T.Vector3(0,1,0),Y_DN=new T.Vector3(0,-1,0);
@@ -1590,57 +1590,31 @@ function busDrop(buf){if(!T.GLTFLoader)return;try{new T.GLTFLoader().parse(buf,'
 {const game3Bus=game3;game3=function(dt,dt0){game3Bus(dt,dt0);if(busMix&&bus.visible)try{busMix.update(dt0)}catch(e){busMix=null}}}
 busLoad();
 
-/* ====== SACAR EL ARMA DE LA ESPALDA, POR ARRIBA ======
-   Al cambiar a un arma (teclas 1-5 o al recoger una) se juega una animación de ~0,6 s:
-     1) el arma aparece colgada a la espalda (cañón arriba y atrás) y la mano derecha sube por el lado de la cabeza y por detrás del hombro a agarrarla
-     2) tira de ella hacia arriba, por encima del hombro y de la cabeza (el arma pasa de la espalda a la mano)
-     3) la lleva hacia delante por el lado de la cabeza y la baja hasta la postura normal de apuntar (el arma gira del cañón arriba a horizontal)
-   La mano sigue una trayectoria suave (spline) y los brazos se resuelven con un IK como el del juego al apuntar (armIK, con más recorrido del hombro), y las palmas objetivo
-   (PSt.tgT/tgL) se pasan igual a las skins GLB, así el esqueleto procedural y la skin van siempre a la vez. El arma va agarrada por la empuñadura.
-   No se juega al correr (con Rifle Run el arma ya va en las manos). Se aplica DESPUÉS de game2 y ANTES de skinUpdate.
-   Ajustes: DRAW.D (duración, s) · RS/BK/TP/FW (puntos de la mano en el sistema del torso: +X izquierda, +Y arriba, +Z delante) · ST (dirección del cañón colgada). */
-const DRAW={t:1,s:-1,it:null,D:.70,TG:.42,uR:[0,0,0],uL:[0,0,0],bg:null,qs:null,
- RS:[-.62,.95,.04],BK:[-.32,.90,-.34],TP:[-.42,1.10,-.14],FW:[-.52,.94,.22],LR:[.38,.08,.12],ST:[.50,.85,-.15]};
-{const z=new T.Vector3(...DRAW.ST).normalize(),y=new T.Vector3(0,0,-1).addScaledVector(z,z.z).normalize(),x=new T.Vector3().crossVectors(y,z);DRAW.qs=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,z))}
-const drawS=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
-/* IK como el de armIK del juego, pero con más recorrido del hombro (-3,6): para llegar por detrás de la cabeza hay que subir el brazo pasando la vertical.
-   Solo se usa UNA vez para resolver las poses clave (espalda, arriba, delante); la animación interpola los ángulos entre ellas. */
-function drawIK(i,Tg,u,n){const lo=[-3.6,-1.6,-2.7],hi=[1.3,1.6,.05];for(let it=0;it<n;it++){const p=armFK(i,u),e=[Tg[0]-p[0],Tg[1]-p[1],Tg[2]-p[2]];if(Math.abs(e[0])+Math.abs(e[1])+Math.abs(e[2])<.002)break;const J=[];for(let k=0;k<3;k++){const u2=u.slice();u2[k]+=.01;const q=armFK(i,u2);J.push([(q[0]-p[0])/.01,(q[1]-p[1])/.01,(q[2]-p[2])/.01])}
- const A=[[0,0,0],[0,0,0],[0,0,0]],b=[0,0,0];for(let r=0;r<3;r++){for(let c=0;c<3;c++)A[r][c]=J[r][0]*J[c][0]+J[r][1]*J[c][1]+J[r][2]*J[c][2]+(r==c?.02:0);b[r]=J[r][0]*e[0]+J[r][1]*e[1]+J[r][2]*e[2]}
- const d=solve3(A,b);for(let k=0;k<3;k++)u[k]=Math.max(lo[k],Math.min(hi[k],u[k]+d[k]))}return u}
-function drawSolve(i,Tg,seeds){let best=seeds[0].slice(),be=9;for(const s of seeds){const u=drawIK(i,Tg,s.slice(),80),p=armFK(i,u),e=Math.hypot(Tg[0]-p[0],Tg[1]-p[1],Tg[2]-p[2]);if(e<be){be=e;best=u}}return best}
-DRAW.jR=drawSolve(0,DRAW.RS,[[-1.6,-1.0,-1.0],[-2.0,-.8,-1.2],[-1.2,-1.2,-.6]]);/* subida por el lado, esquivando la cabeza */
-DRAW.jB=drawSolve(0,DRAW.BK,[[-2.3,-.2,-2.2],[-2.9,-.3,-.7],[-3.3,-.4,-1.5]]);/* ángulos [hombro x, hombro z, codo] con la mano en la espalda / arriba / delante */
-DRAW.jT=drawSolve(0,DRAW.TP,[[-2.3,-.2,-2.2],[-2.9,-.3,-.7],[-3.3,-.4,-1.5]]);
-DRAW.jF=drawSolve(0,DRAW.FW,[[-1.6,-.4,-1.5],[-2.3,-.2,-2.2],[-1.2,0,-1.2]]);
-DRAW.jL=drawSolve(1,DRAW.LR,[[-1,0,-1],[-.5,0,-.5]]);/* mano izquierda relajada */
-const _dq=new T.Quaternion(),_dq2=new T.Quaternion(),_dq3=new T.Quaternion(),_dv=new T.Vector3();
-/* trayectoria: knots K[0..5] (normal → por el lado → espalda → arriba → delante → normal) con Catmull-Rom; sube hasta la espalda, hace una pausa corta al agarrar y sigue */
-function drawPath(t,K){const n=K.length-1;let p;if(t<.34)p=2*drawS(t/.34);else if(t<DRAW.TG)p=2;else{const x=(t-DRAW.TG)/(1-DRAW.TG);p=2+(n-2)*(.5*x+.5*drawS(x))}
- const i=Math.min(n-1,Math.floor(p)),u=p-i,P=j=>K[Math.max(0,Math.min(n,j))],a=P(i-1),b=P(i),c=P(i+1),d=P(i+2),u2=u*u,u3=u2*u,o=[0,0,0];
- for(let k=0;k<3;k++)o[k]=.5*(2*b[k]+(-a[k]+c[k])*u+(2*a[k]-5*b[k]+4*c[k]-d[k])*u2+(-a[k]+3*b[k]-3*c[k]+d[k])*u3);return o}
+/* ====== SACAR EL ARMA DE LA ESPALDA ======
+   Al cambiar a un arma en la barra de objetos (teclas 1-6 o al recoger una) se juega una animación rápida (~0,35 s):
+   la mano derecha sube por detrás del hombro hasta la espalda, agarra el arma de allí y la saca hacia delante hasta la postura de siempre.
+   El arma NO se inclina hacia arriba: mantiene en todo momento su orientación de postura normal (horizontal, apuntando al frente).
+   Se aplica DESPUÉS de game2 (el esqueleto procedural ya está posado) y ANTES de skinUpdate, así también la ven las skins GLB. */
+const DRAW={t:1,s:-1,it:null,D:.35};
 function drawTick(dt0){
- const it=inv[sel],c=me,par=held.parent,changed=DRAW.s!==sel||DRAW.it!==it;DRAW.s=sel;DRAW.it=it;
- if(!(playing&&!lobby&&!paused&&P.mode=='ground'&&it&&it.t=='w'&&!em&&slide<=0&&!sprAct&&par===c.ea[0])){DRAW.t=1;if(DRAW.bg)DRAW.bg.g.visible=false;return}
- const a0=c.ua[0].rotation,a1=c.ua[1].rotation,e0=c.ea[0].rotation,e1=c.ea[1].rotation;
+ const it=inv[sel],changed=DRAW.s!==sel||DRAW.it!==it;DRAW.s=sel;DRAW.it=it;
+ if(!(playing&&!lobby&&!paused&&P.mode=='ground'&&it&&it.t=='w'&&!em&&slide<=0)){DRAW.t=1;return}
  if(changed)DRAW.t=0;
- if(DRAW.t>=1){if(DRAW.bg)DRAW.bg.g.visible=false;return}
- DRAW.t=Math.min(1,DRAW.t+dt0/DRAW.D);const t=DRAW.t;
- held.getWorldQuaternion(_dq);/* orientación normal del arma (mundo), antes de mover los brazos */
- const nR=[a0.x,a0.z,e0.x],nL=[a1.x,a1.z,e1.x];/* pose normal ahora mismo: la animación sale de ella y vuelve a ella */
- const uR=drawPath(t,[nR,DRAW.jR,DRAW.jB,DRAW.jT,DRAW.jF,nR]);uR[0]=Math.max(-3.6,Math.min(1.3,uR[0]));uR[2]=Math.max(-2.7,Math.min(.05,uR[2]));
- const kL=t<.32?drawS(t/.32):t<.75?1:1-drawS((t-.75)/.25),uL=[0,1,2].map(k=>nL[k]+(DRAW.jL[k]-nL[k])*kL);/* mano izquierda: baja relajada y vuelve */
- a0.set(uR[0],0,uR[1]);e0.x=uR[2];a1.set(uL[0],0,uL[1]);e1.x=uL[2];
- PSt.tgW=1;PSt.tgT=armFK(0,uR);PSt.tgL=armFK(1,uL);/* skins GLB: su IK lleva las palmas reales a los mismos puntos que el esqueleto procedural */
- /* el arma: orientación colgada (en el torso) → normal (mundo), siempre agarrada por la empuñadura */
- c.sp.getWorldQuaternion(_dq2);_dq3.copy(_dq2).multiply(DRAW.qs).slerp(_dq,drawS((t-DRAW.TG)/(.92-DRAW.TG)));
- par.getWorldQuaternion(_dq2).conjugate();held.quaternion.copy(_dq2.multiply(_dq3));
- const sc=held.scale.x;_dv.set(GRIP[0],GRIP[1],GRIP[2]).multiplyScalar(sc).applyQuaternion(held.quaternion);held.position.set(0,-AL2,0).sub(_dv);
- held.visible=t>=DRAW.TG;/* hasta agarrarla solo se ve el arma colgada a la espalda */
- let bg=DRAW.bg;
- if(!bg||bg.k!==it.k||bg.r!==it.r){if(bg)bg.g.parent&&bg.g.parent.remove(bg.g);const g=gun(it.k,RAR[it.r][1]);g.traverse(o=>{o.userData.skin=1});c.sp.add(g);bg=DRAW.bg={g,k:it.k,r:it.r}}
- bg.g.visible=t<DRAW.TG;bg.g.scale.setScalar(sc);bg.g.quaternion.copy(DRAW.qs);
- _dv.set(GRIP[0],GRIP[1],GRIP[2]).multiplyScalar(sc).applyQuaternion(DRAW.qs);bg.g.position.set(DRAW.BK[0],DRAW.BK[1],DRAW.BK[2]).sub(_dv)}
+ if(DRAW.t>=1)return;
+ DRAW.t=Math.min(1,DRAW.t+dt0/DRAW.D);
+ const u=Math.max(0,Math.min(1,(DRAW.t-.15)/.85)),k=1-u*u*(3-2*u),c=me,par=held.parent;/* k: 1 = mano atrás, en la espalda · 0 = postura normal (se mantiene un instante atrás y sale suave) */
+ /* orientación y posición normales del arma (en el mundo) ANTES de mover el brazo */
+ let Qn=null,Qpn=null;if(par){Qn=held.getWorldQuaternion(new T.Quaternion());Qpn=par.getWorldQuaternion(new T.Quaternion())}
+ const a0=c.ua[0].rotation,a1=c.ua[1].rotation,e0=c.ea[0].rotation,e1=c.ea[1].rotation;/* brazo derecho arriba y codo muy doblado: la mano pasa por detrás del hombro y llega a la espalda */
+ a0.x+=(-2.3-a0.x)*k;e0.x+=(-2.2-e0.x)*k;a1.x+=(-.7-a1.x)*k;e1.x+=(-.8-e1.x)*k;
+ /* el arma sigue agarrada por la mano pero sin heredar su giro (no apunta hacia arriba): conserva la orientación normal y sale desde detrás del cuerpo */
+ if(par&&Qn){const Qp=par.getWorldQuaternion(new T.Quaternion()),Qi=Qp.clone().conjugate(),w=held.position.clone().applyQuaternion(Qpn),ry=rig.rotation.y;
+  w.x-=Math.sin(ry)*.22;w.z-=Math.cos(ry)*.22;
+  held.quaternion.slerp(Qi.clone().multiply(Qn),k);held.position.lerp(w.applyQuaternion(Qi),k)}
+ if(PSt.tgW>.01&&PSt.tgT&&PSt.tgL){/* objetivos de las palmas de la skin GLB (sistema del torso): mano derecha detrás del hombro, izquierda relajada */
+  const B0=[-.34,.80,-.22],B1=[.26,.30,.26],A0=PSt.tgT,A1=PSt.tgL;
+  PSt.tgT=[A0[0]+(B0[0]-A0[0])*k,A0[1]+(B0[1]-A0[1])*k,A0[2]+(B0[2]-A0[2])*k];
+  PSt.tgL=[A1[0]+(B1[0]-A1[0])*k,A1[1]+(B1[1]-A1[1])*k,A1[2]+(B1[2]-A1[2])*k]}}
 {const g2Draw=game2;game2=function(dt,dt0){g2Draw(dt,dt0);try{drawTick(dt0)}catch(e){DRAW.t=1;console.warn('[sacar arma]',e)}}}
 
 </script>
@@ -1843,7 +1817,7 @@ function harvest(){cam.getWorldDirection(D);rc.set(cam.position,D);rc.far=40;che
 {let n=0,tries=0;while(n<90&&tries++<3000){const x=(rn()-.5)*900,z=(rn()-.5)*900;if(!free(x,z))continue;addRes(n%4==3?'rock':'tree',x,z);n++}}
 /* ---------- interfaz ---------- */
 /* ---------- interfaz compacta estilo Fortnite: barra de objetos pequeña + materiales y piezas justo encima ---------- */
-{const st=document.createElement('style');st.textContent=`#hot{gap:3px;bottom:calc(env(safe-area-inset-bottom,0px) + 36px)}.sl{width:54px;height:54px;border:0;border-radius:0;transition:none}.sl.on{outline:2px solid #fff;outline-offset:-2px;transform:scale(1.15);transform-origin:50% 100%;z-index:2;box-shadow:none;animation:slPop .12s ease-out}@keyframes slPop{from{transform:scale(1)}to{transform:scale(1.15)}}.sl.em{background:#0a123055;border:0}.sl svg{left:2px;top:7px;width:50px;height:34px}.sl u{position:absolute;left:50%;top:100%;margin-top:5px;transform:translateX(-50%);width:22px;height:22px;box-sizing:border-box;border:0;background:#0a1230aa;font:700 12px/20px Arial;text-align:center;text-decoration:none}.sl.on u{border:1px solid #fff;background:#fff3}.sl b{right:3px;bottom:0;font-size:12px;text-shadow:0 1px 2px #000}#wi{right:392px;bottom:calc(env(safe-area-inset-bottom,0px) + 44px)}#wi b{font-size:30px}#wi small{font-size:11px;letter-spacing:.5px;opacity:.8}
+{const st=document.createElement('style');st.textContent=`#hot{gap:3px;bottom:calc(env(safe-area-inset-bottom,0px) + 36px)}.sl{width:54px;height:54px;border:0;border-radius:0;transition:none}.sl.on{outline:2px solid #fff;outline-offset:-2px;transform:none;box-shadow:none;animation:none}.sl.em{background:transparent;border:1px solid #ffffff59}.sl svg{left:2px;top:7px;width:50px;height:34px}.sl u{position:absolute;left:50%;top:100%;margin-top:5px;transform:translateX(-50%);width:22px;height:22px;box-sizing:border-box;border:1px solid #fff6;background:#0a1230aa;font:700 12px/20px Arial;text-align:center;text-decoration:none}.sl.on u{border-color:#fff;background:#fff3}.sl b{right:3px;bottom:0;font-size:12px;text-shadow:0 1px 2px #000}#wi{right:392px;bottom:calc(env(safe-area-inset-bottom,0px) + 44px)}#wi b{font-size:30px}#wi small{font-size:11px;letter-spacing:.5px;opacity:.8}
 #bld{position:fixed;right:30px;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);z-index:6;display:none;flex-direction:column;align-items:flex-end;gap:4px;color:#fff;font:700 12px Arial;pointer-events:none}#bld .mr{display:flex;gap:6px}#bld .mb{position:relative;width:58px;padding:4px 4px 3px;box-sizing:border-box;border:2px solid transparent;text-align:center}#bld .mb.on{background:#ffffff30;border-color:#ffffff88}#bld .mb svg{display:block;width:46px;height:35px;margin:0 auto}#bld .mb s{display:block;margin-top:2px;font:900 13px Arial;text-decoration:none;border-bottom:3px solid #fff;padding-bottom:1px;text-shadow:0 1px 2px #000}#bld u{text-decoration:none;font:700 12px/20px Arial;text-align:center;width:22px;height:22px;box-sizing:border-box;border:1px solid #fff6;background:#0a1230aa;position:absolute}#bld .mb u{left:1px;top:1px;width:15px;height:15px;font:700 10px/13px Arial;border-color:#fff4}#bld .pr{display:flex;gap:10px;align-items:flex-end;padding-top:26px}#bld .pc{position:relative;width:46px;height:44px;display:flex;align-items:center;justify-content:center;opacity:.75;filter:drop-shadow(0 0 5px #2a8dffaa);transition:transform .1s}#bld .pc.on{opacity:1;transform:translateY(-3px) scale(1.12);filter:drop-shadow(0 0 9px #4aa8ff) drop-shadow(0 0 2px #fff)}#bld .pc u{left:50%;bottom:100%;margin-bottom:3px;transform:translateX(-50%)}#bld .pc svg{width:38px;height:38px;stroke-linejoin:round}`;document.head.appendChild(st)}
 const SV=(f,d)=>`<path d="${d}" fill="${f}" stroke="#e4f3ff" stroke-width="1.6"/>`,ICO={wall:SV('#79bfff','M9 6l19-3v27l-19 3z'),floor:SV('#79bfff','M3 18l15-8 15 8-15 8z')+'<path d="M3 18v4l15 8v-4zM33 18v4l-15 8v-4z" fill="#3b86e0"/>',ramp:SV('#79bfff','M3 32v-8h8v-8h8V9h8V4h6v28z')};
 const lg=(x,y)=>`<g transform="translate(${x} ${y})"><path d="M7 0h26v14H7A7 7 0 0 1 7 0z" fill="url(#lw1)"/><path d="M9 3.5h5M19 2.5h4M26 4h4M13 8.5h4M22 10h6M10 11.5h3" stroke="#3d362c" stroke-width="1.3" stroke-linecap="round"/><path d="M8 .6h25" stroke="#fff" stroke-opacity=".75" stroke-width=".8"/><ellipse cx="33" cy="7" rx="4.5" ry="7" fill="#dcb47b" stroke="#8d6034" stroke-width=".8"/><ellipse cx="33" cy="7" rx="3" ry="4.8" fill="none" stroke="#b88a52" stroke-width=".6"/><ellipse cx="33" cy="7" rx="1.5" ry="2.4" fill="none" stroke="#a07038" stroke-width=".5"/><circle cx="33" cy="7" r=".7" fill="#7d5128"/></g>`;
@@ -1882,7 +1856,7 @@ function keepHold(){if(playing&&!lobby&&inv.length&&!inv[sel]){sel=0;holdUpdate(
 /* al deslizarse los brazos no se estiran: ni con objeto, ni con arma, ni con las manos vacías */
 function slideArms(){const w=PSt.sw||0;if(w<.003)return;PSt.tgW=(PSt.tgW||0)*(1-w);for(let i=0;i<2;i++){const u=me.ua[i],ee=me.ea[i];u.rotation.x=lerp(u.rotation.x,-.45-i*.08,w);u.rotation.z=lerp(u.rotation.z,(i?1:-1)*.22,w);ee.rotation.x=lerp(ee.rotation.x,-1.15,w)}}
 const g2=game2;game2=function(dt,dt0){try{crouchTune(dt0);keepHold()}catch(e){console.error('[v7-build]',e)}g2(dt,dt0);try{slideArms();buildHands()}catch(e){console.error('[v7-build]',e)}};
-addEventListener('keydown',e=>{if(!playing||lobby||B.on||B.ed)return;const m=/^Digit([1-5])$/.exec(e.code);if(m&&!inv[+m[1]])e.stopImmediatePropagation()},true);
+addEventListener('keydown',e=>{if(!playing||lobby||B.on||B.ed)return;const m=/^Digit([1-6])$/.exec(e.code);if(m&&!inv[+m[1]-1])e.stopImmediatePropagation()},true);
 const hu0=holdUpdate;holdUpdate=function(){if(!inv[sel])sel=0;return hu0.apply(this,arguments)};
 const fire0=fire;fire=function(){if(B.on||B.ed)return;const c0=cd;fire0();if(cd>c0&&inv[sel]&&inv[sel].t=='p')harvest()};
 function clearAll(){for(const p of[...pcs.values()]){bg.remove(p.g)}pcs.clear();nodes.clear();npos.clear();cellIdx.clear();ys.clear();wl.length=0;anim.length=0;for(const f of fall)fg.remove(f.g);fall.length=0;B.on=false;B.ed=null;MAT.w=200;MAT.s=100;MAT.m=100;for(const k in PV)PV[k].visible=false;bUi()}
@@ -2488,26 +2462,6 @@ function pickaxe(c,dt0,s){
  PSt.tgW=w;PSt.tgT=PK.T.slice();PSt.tgL=PK.Tl.slice()/* objetivos de las palmas para el IK propio de las skins .glb (las manos reales llegan al mismo sitio) */}
 
 /* ---------- bucle (se ejecuta después de game2 y antes de skinUpdate) ---------- */
-/* ====== ARMA EN LAS MANOS AL CORRER (Rifle Run) ======
-   Antes el juego escondía el arma en cuanto empezabas a correr. Ahora se queda en las manos: se coloca sobre las dos manos de la animación
-   (cañón de la mano derecha hacia la izquierda, la parte de arriba del arma hacia arriba) y el agarre queda en la palma derecha.
-   Se aplica al final de frame(): ya están puestas las poses del FBX, y para las skins GLB holdWeapon() la lleva luego a la palma real. */
-const CAR={w:0},_c1=new T.Vector3(),_c2=new T.Vector3(),_cx=new T.Vector3(),_cy=new T.Vector3(),_cm=new T.Matrix4(),_cq=new T.Quaternion(),_cp=new T.Quaternion();
-function carry(c,s,dt0){
- PSt.cr=0;
- const wpn=s&&s.t=='w'&&P.mode=='ground'&&playing&&!lobby&&!paused&&!em&&slide<=0&&held.parent===c.ea[0]&&!(typeof B!='undefined'&&B.on);
- CAR.w+=(((wpn&&sprAct)?1:0)-CAR.w)*(1-Math.exp(-dt0*12));if(CAR.w<.005)CAR.w=0;
- if(!wpn||CAR.w<=0)return;
- const w=CAR.w;held.visible=true;PSt.cr=1;
- c.ea[0].updateWorldMatrix(true,false);c.ea[1].updateWorldMatrix(true,false);
- _c1.set(0,-AL2,0);c.ea[0].localToWorld(_c1);_c2.set(0,-AL2,0);c.ea[1].localToWorld(_c2);
- _c2.sub(_c1);const len=_c2.length();
- if(len>.12){_c2.divideScalar(len);/* cañón */
-  _cy.set(0,1,0).addScaledVector(_c2,-_c2.y);if(_cy.lengthSq()>1e-4){_cy.normalize();_cx.crossVectors(_cy,_c2);_cm.makeBasis(_cx,_cy,_c2);_cq.setFromRotationMatrix(_cm);
-   c.ea[0].getWorldQuaternion(_cp).conjugate();_cq.premultiply(_cp);held.quaternion.slerp(_cq,w)}}
- const sc=lerp(held.scale.x,GSC,w);held.scale.setScalar(sc);
- _c1.set(GRIP[0],GRIP[1],GRIP[2]).multiplyScalar(sc).applyQuaternion(held.quaternion);
- _c2.set(0,-AL2,0).sub(_c1);held.position.lerp(_c2,w)}
 function frame(){
  const dt0=clamp(P.t-FB.lt,0,.05);FB.lt=P.t;const c=me,s=inv[sel];
  FB.air=(P.mode=='ground'&&P.y>H(P.x,P.z)+.25)?FB.air+dt0:0;
@@ -2528,8 +2482,7 @@ function frame(){
    if(gW>.01&&P.mode=='ground'&&c.dim){/* pies al suelo: la cadera baja o sube hasta que la suela más baja toque el suelo (como el agachado procedural) */
     let low=1e9;for(let i=0;i<2;i++)low=Math.min(low,legFK(c,i).low);const y=CRP.contact-low;if(isFinite(y)){FB.hy=FB.hy==null?y:FB.hy+(y-FB.hy)*(1-Math.exp(-dt0*CFG.hipsSmooth));c.hips.position.y=lerp(c.hips.position.y,FB.hy,clamp(gW,0,1))}}else FB.hy=null}
  }
- if(!PK.dead)try{pickaxe(c,dt0,s)}catch(e){PK.dead=true;FB.wPk=0;console.error('[FBX] pico:',e)}
- try{carry(c,s,dt0)}catch(e){console.error('[FBX] arma al correr:',e)}}
+ if(!PK.dead)try{pickaxe(c,dt0,s)}catch(e){PK.dead=true;FB.wPk=0;console.error('[FBX] pico:',e)}}
 function run(){
  if(FB.ran)return;FB.ran=true;
  try{frame()}catch(e){console.error('[FBX]',e);if(++FB.err>3){FB.on=false;PK.dead=true;console.warn('[FBX] desactivado por errores: se usan las animaciones procedurales')}}}
