@@ -1415,7 +1415,7 @@ function driveArms(S,c){const a=_sq[0],p=_sq[1],wA=(PSt.tgW>.01&&PSt.tgT&&PSt.tg
 function holdWeapon(S,c){if(S.hd){if(held.position.distanceToSquared(S.hd.after)<1e-12)held.position.sub(S.hd.d);S.hd=null}
  if(!S.hand||!held.visible||held.parent!==c.ea[0])return;
  S.holder.updateMatrix();const pg=_sv[0].copy(S.gripL).applyMatrix4(relM(S.hand,S.holder)).applyMatrix4(S.holder.matrix),pl=pg.applyMatrix4(relM(c.ea[0],c.g).invert()),
- d=new T.Vector3(pl.x,pl.y+(PSt.tgW>.01?AL2:.3),pl.z);if(!(d.length()<.6))return;held.position.add(d);S.hd={d,after:held.position.clone()}}
+ d=new T.Vector3(pl.x,pl.y+(PSt.tgW>.01||PSt.cr?AL2:.3),pl.z);if(!(d.length()<.6))return;held.position.add(d);S.hd={d,after:held.position.clone()}}
 
 /* ---------- montaje del modelo sobre un personaje procedural (jugador o NPC Jonesy) ---------- */
 const Y_UP=new T.Vector3(0,1,0),Y_DN=new T.Vector3(0,-1,0);
@@ -1591,42 +1591,56 @@ function busDrop(buf){if(!T.GLTFLoader)return;try{new T.GLTFLoader().parse(buf,'
 busLoad();
 
 /* ====== SACAR EL ARMA DE LA ESPALDA, POR ARRIBA ======
-   Al cambiar a un arma en la barra de objetos (teclas 1-5 o al recoger una) se juega una animación de ~0,5 s en tres fases:
-     1) la mano derecha sube por detrás del hombro hasta la espalda (el arma aún no se ve: está colgada a la espalda)
-     2) agarra el arma y tira de ella hacia arriba hasta dejarla por encima del hombro y la cabeza (el arma va apareciendo desde la espalda)
-     3) la pasa por encima del hombro hacia delante y la baja hasta la postura normal
-   El arma NO se inclina: mantiene siempre su orientación normal (horizontal, apuntando al frente) y va siempre en la mano.
-   No se juega al correr (con Rifle Run el arma no va en las manos).
-   Se aplica DESPUÉS de game2 (el esqueleto procedural ya está posado) y ANTES de skinUpdate, así también la ven las skins GLB.
-   Ajustes: DRAW.D = duración (s) · DRAW.BK / DRAW.TP = pose de la mano en la espalda / arriba (a, e = giro del hombro y del codo en rad; p = objetivo de la palma para las skins,
-   en el marco del torso: +X izquierda, +Y arriba, +Z delante). */
-const DRAW={t:1,s:-1,it:null,D:.5,BK:{a:-2.5,e:-1.9,p:[-.34,.92,-.14]},TP:{a:-2.9,e:-.7,p:[-.31,1.15,-.02]}};
+   Al cambiar a un arma (teclas 1-5 o al recoger una) se juega una animación de ~0,6 s:
+     1) el arma aparece colgada a la espalda (cañón arriba y atrás) y la mano derecha sube por el lado de la cabeza y por detrás del hombro a agarrarla
+     2) tira de ella hacia arriba, por encima del hombro y de la cabeza (el arma pasa de la espalda a la mano)
+     3) la lleva hacia delante por el lado de la cabeza y la baja hasta la postura normal de apuntar (el arma gira del cañón arriba a horizontal)
+   La mano sigue una trayectoria suave (spline) y los brazos se resuelven con un IK como el del juego al apuntar (armIK, con más recorrido del hombro), y las palmas objetivo
+   (PSt.tgT/tgL) se pasan igual a las skins GLB, así el esqueleto procedural y la skin van siempre a la vez. El arma va agarrada por la empuñadura.
+   No se juega al correr (con Rifle Run el arma ya va en las manos). Se aplica DESPUÉS de game2 y ANTES de skinUpdate.
+   Ajustes: DRAW.D (duración, s) · RS/BK/TP/FW (puntos de la mano en el sistema del torso: +X izquierda, +Y arriba, +Z delante) · ST (dirección del cañón colgada). */
+const DRAW={t:1,s:-1,it:null,D:.70,TG:.42,uR:[0,0,0],uL:[0,0,0],bg:null,qs:null,
+ RS:[-.62,.95,.04],BK:[-.32,.90,-.34],TP:[-.42,1.10,-.14],FW:[-.52,.94,.22],LR:[.38,.08,.12],ST:[.50,.85,-.15]};
+{const z=new T.Vector3(...DRAW.ST).normalize(),y=new T.Vector3(0,0,-1).addScaledVector(z,z.z).normalize(),x=new T.Vector3().crossVectors(y,z);DRAW.qs=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,z))}
 const drawS=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
+/* IK como el de armIK del juego, pero con más recorrido del hombro (-3,6): para llegar por detrás de la cabeza hay que subir el brazo pasando la vertical.
+   Solo se usa UNA vez para resolver las poses clave (espalda, arriba, delante); la animación interpola los ángulos entre ellas. */
+function drawIK(i,Tg,u,n){const lo=[-3.6,-1.6,-2.7],hi=[1.3,1.6,.05];for(let it=0;it<n;it++){const p=armFK(i,u),e=[Tg[0]-p[0],Tg[1]-p[1],Tg[2]-p[2]];if(Math.abs(e[0])+Math.abs(e[1])+Math.abs(e[2])<.002)break;const J=[];for(let k=0;k<3;k++){const u2=u.slice();u2[k]+=.01;const q=armFK(i,u2);J.push([(q[0]-p[0])/.01,(q[1]-p[1])/.01,(q[2]-p[2])/.01])}
+ const A=[[0,0,0],[0,0,0],[0,0,0]],b=[0,0,0];for(let r=0;r<3;r++){for(let c=0;c<3;c++)A[r][c]=J[r][0]*J[c][0]+J[r][1]*J[c][1]+J[r][2]*J[c][2]+(r==c?.02:0);b[r]=J[r][0]*e[0]+J[r][1]*e[1]+J[r][2]*e[2]}
+ const d=solve3(A,b);for(let k=0;k<3;k++)u[k]=Math.max(lo[k],Math.min(hi[k],u[k]+d[k]))}return u}
+function drawSolve(i,Tg,seeds){let best=seeds[0].slice(),be=9;for(const s of seeds){const u=drawIK(i,Tg,s.slice(),80),p=armFK(i,u),e=Math.hypot(Tg[0]-p[0],Tg[1]-p[1],Tg[2]-p[2]);if(e<be){be=e;best=u}}return best}
+DRAW.jR=drawSolve(0,DRAW.RS,[[-1.6,-1.0,-1.0],[-2.0,-.8,-1.2],[-1.2,-1.2,-.6]]);/* subida por el lado, esquivando la cabeza */
+DRAW.jB=drawSolve(0,DRAW.BK,[[-2.3,-.2,-2.2],[-2.9,-.3,-.7],[-3.3,-.4,-1.5]]);/* ángulos [hombro x, hombro z, codo] con la mano en la espalda / arriba / delante */
+DRAW.jT=drawSolve(0,DRAW.TP,[[-2.3,-.2,-2.2],[-2.9,-.3,-.7],[-3.3,-.4,-1.5]]);
+DRAW.jF=drawSolve(0,DRAW.FW,[[-1.6,-.4,-1.5],[-2.3,-.2,-2.2],[-1.2,0,-1.2]]);
+DRAW.jL=drawSolve(1,DRAW.LR,[[-1,0,-1],[-.5,0,-.5]]);/* mano izquierda relajada */
+const _dq=new T.Quaternion(),_dq2=new T.Quaternion(),_dq3=new T.Quaternion(),_dv=new T.Vector3();
+/* trayectoria: knots K[0..5] (normal → por el lado → espalda → arriba → delante → normal) con Catmull-Rom; sube hasta la espalda, hace una pausa corta al agarrar y sigue */
+function drawPath(t,K){const n=K.length-1;let p;if(t<.34)p=2*drawS(t/.34);else if(t<DRAW.TG)p=2;else{const x=(t-DRAW.TG)/(1-DRAW.TG);p=2+(n-2)*(.5*x+.5*drawS(x))}
+ const i=Math.min(n-1,Math.floor(p)),u=p-i,P=j=>K[Math.max(0,Math.min(n,j))],a=P(i-1),b=P(i),c=P(i+1),d=P(i+2),u2=u*u,u3=u2*u,o=[0,0,0];
+ for(let k=0;k<3;k++)o[k]=.5*(2*b[k]+(-a[k]+c[k])*u+(2*a[k]-5*b[k]+4*c[k]-d[k])*u2+(-a[k]+3*b[k]-3*c[k]+d[k])*u3);return o}
 function drawTick(dt0){
- const it=inv[sel],changed=DRAW.s!==sel||DRAW.it!==it;DRAW.s=sel;DRAW.it=it;
- if(!(playing&&!lobby&&!paused&&P.mode=='ground'&&it&&it.t=='w'&&!em&&slide<=0&&!sprAct)){DRAW.t=1;return}
- if(changed)DRAW.t=0;
- if(DRAW.t>=1)return;
- DRAW.t=Math.min(1,DRAW.t+dt0/DRAW.D);
- const t=DRAW.t,BK=DRAW.BK,TP=DRAW.TP,c=me,par=held.parent;
- /* pesos de las poses: wB = mano en la espalda · wT = mano arriba, por encima del hombro · el resto (wN) = postura normal */
- let wB=0,wT=0;
- if(t<.26)wB=drawS(t/.26);
- else if(t<.52){const p=drawS((t-.26)/.26);wB=1-p;wT=p}
- else wT=1-drawS((t-.52)/.48);
- const wN=1-wB-wT,k=1-wN;
- /* orientación normal del arma (en el mundo) ANTES de mover el brazo */
- let Qn=null;if(par)Qn=held.getWorldQuaternion(new T.Quaternion());
+ const it=inv[sel],c=me,par=held.parent,changed=DRAW.s!==sel||DRAW.it!==it;DRAW.s=sel;DRAW.it=it;
+ if(!(playing&&!lobby&&!paused&&P.mode=='ground'&&it&&it.t=='w'&&!em&&slide<=0&&!sprAct&&par===c.ea[0])){DRAW.t=1;if(DRAW.bg)DRAW.bg.g.visible=false;return}
  const a0=c.ua[0].rotation,a1=c.ua[1].rotation,e0=c.ea[0].rotation,e1=c.ea[1].rotation;
- a0.x=a0.x*wN+BK.a*wB+TP.a*wT;e0.x=e0.x*wN+BK.e*wB+TP.e*wT;a0.z+=(-.22-a0.z)*k;/* codo algo hacia fuera: la mano pasa junto a la cabeza, no a través de ella */
- a1.x+=(-.7-a1.x)*k;e1.x+=(-.8-e1.x)*k;/* brazo izquierdo relajado */
- /* el arma sigue en la mano pero sin heredar su giro (no se inclina); sale de la espalda: crece desde la mano al agarrarla */
- if(par&&Qn){const Qi=par.getWorldQuaternion(new T.Quaternion()).conjugate();held.quaternion.slerp(Qi.multiply(Qn),k)}
- held.scale.setScalar(Math.max(.001,drawS((t-.22)/.3)));
- if(PSt.tgW>.01&&PSt.tgT&&PSt.tgL){/* objetivos de las palmas de la skin GLB (sistema del torso): derecha espalda → arriba → normal, izquierda relajada */
-  const N0=PSt.tgT,N1=PSt.tgL,R1=[.26,.30,.26],T0=[0,0,0],L0=[0,0,0];
-  for(let i=0;i<3;i++){T0[i]=N0[i]*wN+BK.p[i]*wB+TP.p[i]*wT;L0[i]=N1[i]+(R1[i]-N1[i])*k}
-  PSt.tgT=T0;PSt.tgL=L0}}
+ if(changed)DRAW.t=0;
+ if(DRAW.t>=1){if(DRAW.bg)DRAW.bg.g.visible=false;return}
+ DRAW.t=Math.min(1,DRAW.t+dt0/DRAW.D);const t=DRAW.t;
+ held.getWorldQuaternion(_dq);/* orientación normal del arma (mundo), antes de mover los brazos */
+ const nR=[a0.x,a0.z,e0.x],nL=[a1.x,a1.z,e1.x];/* pose normal ahora mismo: la animación sale de ella y vuelve a ella */
+ const uR=drawPath(t,[nR,DRAW.jR,DRAW.jB,DRAW.jT,DRAW.jF,nR]);uR[0]=Math.max(-3.6,Math.min(1.3,uR[0]));uR[2]=Math.max(-2.7,Math.min(.05,uR[2]));
+ const kL=t<.32?drawS(t/.32):t<.75?1:1-drawS((t-.75)/.25),uL=[0,1,2].map(k=>nL[k]+(DRAW.jL[k]-nL[k])*kL);/* mano izquierda: baja relajada y vuelve */
+ a0.set(uR[0],0,uR[1]);e0.x=uR[2];a1.set(uL[0],0,uL[1]);e1.x=uL[2];
+ PSt.tgW=1;PSt.tgT=armFK(0,uR);PSt.tgL=armFK(1,uL);/* skins GLB: su IK lleva las palmas reales a los mismos puntos que el esqueleto procedural */
+ /* el arma: orientación colgada (en el torso) → normal (mundo), siempre agarrada por la empuñadura */
+ c.sp.getWorldQuaternion(_dq2);_dq3.copy(_dq2).multiply(DRAW.qs).slerp(_dq,drawS((t-DRAW.TG)/(.92-DRAW.TG)));
+ par.getWorldQuaternion(_dq2).conjugate();held.quaternion.copy(_dq2.multiply(_dq3));
+ const sc=held.scale.x;_dv.set(GRIP[0],GRIP[1],GRIP[2]).multiplyScalar(sc).applyQuaternion(held.quaternion);held.position.set(0,-AL2,0).sub(_dv);
+ held.visible=t>=DRAW.TG;/* hasta agarrarla solo se ve el arma colgada a la espalda */
+ let bg=DRAW.bg;
+ if(!bg||bg.k!==it.k||bg.r!==it.r){if(bg)bg.g.parent&&bg.g.parent.remove(bg.g);const g=gun(it.k,RAR[it.r][1]);g.traverse(o=>{o.userData.skin=1});c.sp.add(g);bg=DRAW.bg={g,k:it.k,r:it.r}}
+ bg.g.visible=t<DRAW.TG;bg.g.scale.setScalar(sc);bg.g.quaternion.copy(DRAW.qs);
+ _dv.set(GRIP[0],GRIP[1],GRIP[2]).multiplyScalar(sc).applyQuaternion(DRAW.qs);bg.g.position.set(DRAW.BK[0],DRAW.BK[1],DRAW.BK[2]).sub(_dv)}
 {const g2Draw=game2;game2=function(dt,dt0){g2Draw(dt,dt0);try{drawTick(dt0)}catch(e){DRAW.t=1;console.warn('[sacar arma]',e)}}}
 
 </script>
@@ -2474,6 +2488,26 @@ function pickaxe(c,dt0,s){
  PSt.tgW=w;PSt.tgT=PK.T.slice();PSt.tgL=PK.Tl.slice()/* objetivos de las palmas para el IK propio de las skins .glb (las manos reales llegan al mismo sitio) */}
 
 /* ---------- bucle (se ejecuta después de game2 y antes de skinUpdate) ---------- */
+/* ====== ARMA EN LAS MANOS AL CORRER (Rifle Run) ======
+   Antes el juego escondía el arma en cuanto empezabas a correr. Ahora se queda en las manos: se coloca sobre las dos manos de la animación
+   (cañón de la mano derecha hacia la izquierda, la parte de arriba del arma hacia arriba) y el agarre queda en la palma derecha.
+   Se aplica al final de frame(): ya están puestas las poses del FBX, y para las skins GLB holdWeapon() la lleva luego a la palma real. */
+const CAR={w:0},_c1=new T.Vector3(),_c2=new T.Vector3(),_cx=new T.Vector3(),_cy=new T.Vector3(),_cm=new T.Matrix4(),_cq=new T.Quaternion(),_cp=new T.Quaternion();
+function carry(c,s,dt0){
+ PSt.cr=0;
+ const wpn=s&&s.t=='w'&&P.mode=='ground'&&playing&&!lobby&&!paused&&!em&&slide<=0&&held.parent===c.ea[0]&&!(typeof B!='undefined'&&B.on);
+ CAR.w+=(((wpn&&sprAct)?1:0)-CAR.w)*(1-Math.exp(-dt0*12));if(CAR.w<.005)CAR.w=0;
+ if(!wpn||CAR.w<=0)return;
+ const w=CAR.w;held.visible=true;PSt.cr=1;
+ c.ea[0].updateWorldMatrix(true,false);c.ea[1].updateWorldMatrix(true,false);
+ _c1.set(0,-AL2,0);c.ea[0].localToWorld(_c1);_c2.set(0,-AL2,0);c.ea[1].localToWorld(_c2);
+ _c2.sub(_c1);const len=_c2.length();
+ if(len>.12){_c2.divideScalar(len);/* cañón */
+  _cy.set(0,1,0).addScaledVector(_c2,-_c2.y);if(_cy.lengthSq()>1e-4){_cy.normalize();_cx.crossVectors(_cy,_c2);_cm.makeBasis(_cx,_cy,_c2);_cq.setFromRotationMatrix(_cm);
+   c.ea[0].getWorldQuaternion(_cp).conjugate();_cq.premultiply(_cp);held.quaternion.slerp(_cq,w)}}
+ const sc=lerp(held.scale.x,GSC,w);held.scale.setScalar(sc);
+ _c1.set(GRIP[0],GRIP[1],GRIP[2]).multiplyScalar(sc).applyQuaternion(held.quaternion);
+ _c2.set(0,-AL2,0).sub(_c1);held.position.lerp(_c2,w)}
 function frame(){
  const dt0=clamp(P.t-FB.lt,0,.05);FB.lt=P.t;const c=me,s=inv[sel];
  FB.air=(P.mode=='ground'&&P.y>H(P.x,P.z)+.25)?FB.air+dt0:0;
@@ -2482,7 +2516,6 @@ function frame(){
   const tg=targets(s),a=1-Math.exp(-dt0*CFG.fade);let sum=0;
   for(const k in FB.cl){let w=FB.w[k]||0;w+=((tg[k]||0)-w)*a;if(w<.003&&!tg[k])w=0;FB.w[k]=w;sum+=w}
   if(sum>1)for(const k in FB.cl)FB.w[k]/=sum;
-  if((FB.w.rrun||0)>.3)held.visible=false;/* con la animación Rifle Run el arma no va en las manos */
   const act=[];let gW=0;for(const k in FB.cl)if(FB.w[k]>0){act.push(k);if(GROUND.includes(k))gW+=FB.w[k]}
   if(!act.length)FB.hy=null;
   if(act.length){
@@ -2495,7 +2528,8 @@ function frame(){
    if(gW>.01&&P.mode=='ground'&&c.dim){/* pies al suelo: la cadera baja o sube hasta que la suela más baja toque el suelo (como el agachado procedural) */
     let low=1e9;for(let i=0;i<2;i++)low=Math.min(low,legFK(c,i).low);const y=CRP.contact-low;if(isFinite(y)){FB.hy=FB.hy==null?y:FB.hy+(y-FB.hy)*(1-Math.exp(-dt0*CFG.hipsSmooth));c.hips.position.y=lerp(c.hips.position.y,FB.hy,clamp(gW,0,1))}}else FB.hy=null}
  }
- if(!PK.dead)try{pickaxe(c,dt0,s)}catch(e){PK.dead=true;FB.wPk=0;console.error('[FBX] pico:',e)}}
+ if(!PK.dead)try{pickaxe(c,dt0,s)}catch(e){PK.dead=true;FB.wPk=0;console.error('[FBX] pico:',e)}
+ try{carry(c,s,dt0)}catch(e){console.error('[FBX] arma al correr:',e)}}
 function run(){
  if(FB.ran)return;FB.ran=true;
  try{frame()}catch(e){console.error('[FBX]',e);if(++FB.err>3){FB.on=false;PK.dead=true;console.warn('[FBX] desactivado por errores: se usan las animaciones procedurales')}}}
